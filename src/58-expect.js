@@ -107,7 +107,8 @@
         var box = o.container ? queryTarget(o.container) : (document.scrollingElement || document.documentElement);
         if (!box) throw new Error('scroll container not found: ' + describe(o.container));
         var maxTop = box.scrollHeight - box.clientHeight;
-        if (box.scrollTop >= maxTop - 1 || n++ >= max) throw new Error('scrolled to the end but never found ' + describe(target));
+        if (box.scrollTop >= maxTop - 1) throw new Error('scrolled to the end but never found ' + describe(target));
+        if (n++ >= max) throw new Error('scrolled ' + max + ' times without finding ' + describe(target) + ' (raise maxScrolls, or use a smaller step for virtual lists)');
         var dy = o.step || box.clientHeight * 0.8;
         return self._animateScroll([box], [[box.scrollLeft, clamp(box.scrollTop + dy, 0, maxTop)]], { duration: o.duration || 500 })
           .then(function () { return sleep(120 / self.opts.speed); }).then(step);

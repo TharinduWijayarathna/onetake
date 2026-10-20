@@ -14,7 +14,7 @@
         src = el;
         return self._resolve(target, o.timeout);
       }).then(function (dst) {
-        var to = self._pointIn(dst, o.to || {});
+        var to = self._pointIn(dst, o.to ? { position: o.to } : {});   // to: { x: 0..1, y: 0..1 } inside the target
         self._cursor.classList.add('ot-pressed');
         var run = self._real() ? realDrag(self, to, sp) : synthDrag(self, src, to, sp);
         return run.then(function () { self._cursor.classList.remove('ot-pressed'); });

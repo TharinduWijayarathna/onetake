@@ -3,10 +3,17 @@ node_modules/
 
 # recorder output, saved logins and videos
 recordings/
+videos/
 auth.json
 *.mp4
 *.webm
 *.mov
+*.gif
+*.raw.*
+*.failure.png
+*.failure.html
+*.timeline.json
+test/.output/
 
 # logs / temp
 npm-debug.log*

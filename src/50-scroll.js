@@ -10,22 +10,28 @@
     }
   });
 
+  function parentOf(n) { return n.parentElement || (n.parentNode && n.parentNode.host) || null; }
+
+  /** Every container that scrolls `el` into view: its scrollable ancestors, through shadow roots and iframes. */
   function scrollersOf(el) {
-    var list = [], se = document.scrollingElement || document.documentElement;
-    for (var n = el.parentElement; n; n = n.parentElement) {
-      if (n === se || n === document.body) continue;
-      var cs = getComputedStyle(n);
-      if (/(auto|scroll|overlay)/.test(cs.overflowY + ' ' + cs.overflowX) &&
-          (n.scrollHeight > n.clientHeight || n.scrollWidth > n.clientWidth)) list.push(n);
+    var list = [];
+    for (var cur = el; cur; cur = frameOf(cur)) {
+      var doc = cur.ownerDocument, se = doc.scrollingElement || doc.documentElement;
+      for (var n = parentOf(cur); n; n = parentOf(n)) {
+        if (n === se || n === doc.body || n.nodeType !== 1) continue;
+        var cs = winOf(n).getComputedStyle(n);
+        if (/(auto|scroll|overlay)/.test(cs.overflowY + ' ' + cs.overflowX) &&
+            (n.scrollHeight > n.clientHeight || n.scrollWidth > n.clientWidth)) list.push(n);
+      }
+      list.push(se);
     }
-    list.push(se);
     return list;
   }
   function scrollPositions(boxes) { return boxes.map(function (b) { return [b.scrollLeft, b.scrollTop]; }); }
   function easeInOutCubic(t) { return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2; }
 
   P._ensureInView = function (el, o) {
-    var r = el.getBoundingClientRect(), m = 40;
+    var r = rectOf(el), m = 40;
     var inView = r.top >= m && r.bottom <= innerHeight - m && r.left >= 0 && r.right <= innerWidth;
     if (inView && !(o && o.force)) return Promise.resolve();
     var block = (o && o.block) || 'center';

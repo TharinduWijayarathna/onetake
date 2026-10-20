@@ -132,7 +132,7 @@
     var sp = this.opts.speed;
     return this._resolve(target, o.timeout).then(function (el) {
       return self._ensureInView(el).then(function () {
-        var r = el.getBoundingClientRect(), rnd = seeded(Math.floor(Math.random() * 1e9));
+        var r = rectOf(el), rnd = seeded(Math.floor(Math.random() * 1e9));
         var h = { el: el, nodes: [], w: r.width, h: r.height, pad: o.padding, shape: o.shape };
         var drawMs = o.drawDuration / sp;
         var drawn = shape(self, h, r, o, rnd, drawMs);
@@ -163,7 +163,7 @@
   P._updateHighlights = function () {
     this._highlights.forEach(function (h) {
       if (!h.el.isConnected) return;
-      var r = h.el.getBoundingClientRect(), pad = h.pad;
+      var r = rectOf(h.el), pad = h.pad;
       if (h.group) h.group.setAttribute('transform', 'translate(' + r.left + ' ' + r.top + ')' +
         (h.w > 0 && Math.abs(r.width / h.w - 1) > 0.001 ? ' scale(' + (r.width / h.w) + ')' : ''));
       if (h.box) {

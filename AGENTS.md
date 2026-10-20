@@ -1,166 +1,208 @@
-# AGENTS.md — making a demo video for a project with OneTake
+# AGENTS.md: making a demo video of a project with OneTake
 
-This file is for AI coding agents (Claude, Codex, Cursor, Copilot, Gemini, …). It explains how to turn
-a running web app into a polished product-demo video: a human-looking cursor drives the real UI, the
-camera zooms in on what matters, hand-drawn highlights and captions guide the viewer, and the
-recorder renders it frame by frame to a 60 fps MP4.
+This file is for AI coding agents (Claude, Codex, Cursor, Copilot, Gemini, …). It explains how
+to turn a running web app into a polished product demo video. A human-looking cursor drives
+the real UI, the camera zooms in on what matters, hand-drawn highlights and captions guide
+the viewer, and the recorder renders it frame by frame to a 60 fps MP4 with a window frame,
+title cards, sound, subtitles and chapters.
 
-If you only read one section, read **The workflow** and **Gotchas**.
+If you only read two sections, read **The workflow** and **Gotchas**. The full documentation
+is in [`docs/`](docs/README.md).
 
 ---
 
 ## What you produce
 
-A **demo kit**: a folder that sits **next to** the target project (never inside its repo):
+A **demo kit**: a folder that sits **next to** the target project, never inside its repo.
+Start it from `templates/demo-kit/`:
 
 ```
 <project>-demo/
-├── record.sh          # one command that renders the video (copied from templates/demo-kit/)
-├── 1-<page>.js        # one OneTake script per page load, in order
-├── 2-<page>.js
-├── 3-<page>.js
-├── README.md          # what the demo shows and how to render it
-├── auth.json          # saved login (created by record.sh, private, never commit)
-└── videos/<name>.mp4  # the output
+├── onetake.config.js   # url, viewport, output: frame, intro/outro, sound…
+├── tour.js             # the tour: one script, any number of page loads
+├── steps.js            # reusable steps (OneTake.define) shared by tours
+├── record.sh           # one command: sign in if needed, check, render
+├── README.md           # what the demo shows, what data it creates, how to render it
+├── auth.json           # saved login (created by record.sh; private, never commit)
+└── videos/demo.mp4     # + demo.srt/.vtt, demo.chapters.txt, demo.jpg
 ```
 
 ## The workflow
 
 ### 1. Understand the project and pick a scenario
 
-- Find the app's **existing browser / end-to-end tests**. They are the best map of real user flows, the
-  selectors that work, and the quirks of custom widgets:
-  Laravel Dusk `tests/Browser/`, Playwright `tests/` or `e2e/`, Cypress `cypress/e2e/`, Capybara
-  `spec/system/`, Selenium, etc. Read their helpers / page objects too.
-- List the flows they cover and pick **one scenario that tells a story** in 45–90 seconds: a core
-  task a new user would do first (e.g. "create a client → create an inquiry → see the result").
-  If the user didn't choose, pick it yourself and say which one you picked and why.
+- Find the app's **existing browser / end-to-end tests**. They are the best map of real user
+  flows, of selectors that work, and of how custom widgets behave: Laravel Dusk
+  `tests/Browser/`, Playwright `tests/` or `e2e/`, Cypress `cypress/e2e/`, Capybara
+  `spec/system/`, Selenium, and so on. Read their helpers and page objects too.
+- Pick **one scenario that tells a story** in 45–90 seconds: a core task a new user would do
+  first ("create a client → create an inquiry → see the result"). If the user didn't choose,
+  pick it yourself and say which one you picked and why.
 - Read the routes and the templates for the pages involved.
 
-### 2. Make sure you can reach the app and sign in
+### 2. Reach the app and sign in
 
-- The app must be running and reachable from the browser that will render the video (usually the
-  user's own machine: `http://localhost…`). Check with `curl`.
-- Sign-in: **never guess or type real passwords**. Prefer, in order:
-  1. a saved session: `node tools/save-login.js --url <login page> --out <kit>/auth.json` opens a window
-     and the **user** signs in once (this is what `record.sh` does automatically);
-  2. a test account the project itself documents for local development (seeders, fixtures, `.env.example`),
-     only on a local development host;
+- The app must be reachable from the machine that renders the video (usually the user's:
+  `http://localhost…`). Check with `curl`.
+- Sign-in: **never guess or type real passwords**. In order of preference:
+  1. a saved session: `onetake login --url <login page> --until <after-login regex> --out auth.json`.
+     A browser window opens and **the user** signs in once. `record.sh` does this when
+     `LOGIN_PATH` is set.
+  2. a demo account that the project itself documents for local development (seeders,
+     fixtures, `.env.example`), on a local host only;
   3. ask the user.
-- If pages render unstyled, the asset pipeline isn't serving (e.g. Laravel `public/hot` pointing at a Vite
-  dev server that isn't running). Use built assets (`npm run build`) or start the dev server. Ask before
-  changing anything in the project.
+- If pages render unstyled, the asset pipeline isn't serving (for example, Laravel
+  `public/hot` points at a Vite dev server that isn't running). Use built assets or start the
+  dev server. Ask before changing anything in the project.
 
-### 3. Map the live DOM before writing the script
+### 3. Map the live DOM
 
-Open each page of the scenario and record, for every control you'll touch:
-- a **stable selector**: `#id`, `[name=…]`, `[data-testid=…]`, `[dusk=…]`, `label=Field label`, or `text=Button text`;
-- how custom widgets work (comboboxes, date pickers, rich text, uploads). Copy the approach from the
-  project's browser tests: they already solved it;
-- the **sections** of each form (good zoom targets) and where page loads happen (each one ends a script).
+For every control the scenario touches, note:
+- the best **target**, in this order: `role=button[name="Save"]`, `text=Save`,
+  `label=Email`, test ids (`[data-testid=…]`, `[dusk=…]`), then CSS;
+- how custom widgets work (comboboxes, date pickers, rich text, uploads). Copy the approach
+  from the project's browser tests;
+- the **components** worth zooming on (a form, a card, a table);
+- where page loads happen. They're fine, just know where they are.
 
-### 4. Write one script per page load
+`OneTake.query('…')` in the browser console tells you whether a target is unique.
 
-Each script is plain JavaScript with a ready `take` (a `OneTake` instance) in scope. Template:
-`templates/demo-kit/1-page.js`. A good page script:
+### 4. Write the tour
+
+`tour.js` is plain JavaScript with a ready `take` in scope. One script covers the whole
+scenario, even across page loads: after a load, the recorder re-injects OneTake and carries
+on with the next step.
 
 ```js
 take
-  .caption('One sentence that tells the viewer what is happening.')
-  .zoom('form', 12)                  // zoom on the component you'll work in, for 12 s
-  .type('label=Client name', 'Emma Clarke')
-  .select('label=Country', 'United Kingdom')
-  .check('text=Subscribe to newsletter')
-  .zoomOut()
-  .box('button[type=submit]', { label: 'Save', duration: 1400 })
-  .click('button[type=submit]');     // navigates → the next script continues on the new page
+  .chapter('New client')
+  .caption('Let’s add a client and send them an inquiry.', { duration: 2600 })
+  .click('role=link[name="Clients"]')
+  .click('text=New client')
+  .expect('role=heading[name="New client"]')
+  .zoom('form', 14)                                    // the component you work in
+  .type('label=Name', 'Emma Clarke')
+  .type('label=Email', 'emma@clarke.example')
+  .click('label=Country').click('role=option[name="United Kingdom"]')   // custom dropdown
+  .box('role=button[name="Save"]', { label: 'Save', duration: 1400 })
+  .click('role=button[name="Save"]')                   // page load: fine
+  .expect('text=Client created')                       // fail loudly
+  .chapter('Inquiry')
+  .click('text=New inquiry')
+  // …
+  .circle('text=INQ-0042', { label: 'Your new inquiry' })
+  .thumbnail()
+  .wait(1200);
 ```
 
 Storytelling rules that make demos look professional:
-- **Zoom on the section you're working in**, then move to the next section; zoom out between pages.
-- Use **captions** for narration (1 short sentence, a few per video), not for every step.
-- Use **one highlight per idea**: circle a result, box the button before clicking it, arrow to the next step.
-- Use **realistic data** (names, emails, amounts) that fits the product. Never real customer data.
-- End on the result (the record that was created) and point at the next step in the product.
+- **Zoom on the component you're working in**, then let the zoom end before moving
+  elsewhere. Or set `options: { autoZoom: true }` for form-heavy tours.
+- **Captions** for narration: one short sentence, a few per video.
+- **One highlight per idea**: circle a result, box the button before clicking it, arrow to
+  the next step.
+- **Chapters** for each part of the story.
+- **`expect()` after every step that should change something.** A tour that silently does
+  the wrong thing renders a wrong video.
+- **Realistic data** (names, emails, amounts) that fits the product. Never real customer data.
+- **End on the result**, hold a second, and mark the thumbnail.
 
-### 5. Rehearse fast, then render
+Put repeated sequences in `steps.js` with `OneTake.define('name', (take, …args) => { … })`.
 
-1. **Rehearse** in a browser on the real app: load `dist/onetake.js` into the page, then run the script with
-   `new OneTake({ speed: 3 })`, and check every step ran (`onStep` / `onError` options). Fix selectors.
-2. **Render**: `bash record.sh` in the demo kit (or call `tools/record.js` directly, see below).
-   The recorder runs the page on a virtual clock, steps it 1/60 s per frame and screenshots each frame,
-   so the video is perfectly smooth. Expect render time of ~2–3× the video length at 1440×900 @1×,
-   ~3–6× at @2×.
-3. **Check the video**: extract a few frames (`ffmpeg -ss 10 -i video.mp4 -frames:v 1 f.png`) and look at
-   them: zoom framing, highlights, captions, final state.
+### 5. Check, render, look
 
-Each run performs real actions in the app (creates records). Tell the user what data it creates.
+1. **Check**: `onetake check --speed 4` (or `CHECK_ONLY=1 bash record.sh`). It plays the tour
+   in seconds with step-by-step output. On failure, it names the step and line, says why
+   ("covered by <div.modal-backdrop>", "matches 3 elements", "its text is …"), and saves
+   `check.failure.png` and `.html`. Fix and repeat until it passes.
+2. **Render**: `bash record.sh` (or `onetake record`). Expect 1–3× the video length at
+   1440×900, 3–6× at `scale: 2`. For quick previews, use `--scale 1 --fps 30`.
+3. **Look at it**: extract a few frames (`ffmpeg -ss 10 -i videos/demo.mp4 -frames:v 1 f.png`)
+   and check the zoom framing, highlights, captions and final state. With `--timeline`, the
+   JSON shows when every step happened.
+4. **Tell the user** what data each run creates in their app.
 
 ---
 
 ## API cheat sheet
 
-Targets: CSS selector · `text=Visible text` (exact match first, then the shortest element containing it) ·
-`label=Field label` (also matches `aria-label`, `placeholder`, `name`) · an element · a function returning one.
-Every action waits up to `waitTimeout` (8 s) for its target to exist and be visible, and scrolls it into view.
+**Targets**: `text=Exact text` (unique, case-insensitive) · `text*=contains` (shortest match) ·
+`label=Field` (label, aria-label, placeholder, name) · `role=button[name="Save"]` ·
+CSS (first match) · `A >> B` (B inside A, also through iframes) · `>> nth=1` · an element ·
+a function. `text=`/`label=`/`role=` fail when they're ambiguous. Open shadow roots are
+searched automatically.
 
-| Method | Notes |
+**Waiting is built in.** Every action waits (up to `waitTimeout`, 8 s) for its element to be
+visible, enabled, still and uncovered, then waits for the app to settle (no requests or DOM
+changes for 200 ms). Don't add `wait()` to wait for the app. Use `expect()`.
+
+| Step | Notes |
 |---|---|
-| `moveTo(target \| {x,y})`, `hover(target, {duration})` | human-like curved movement |
-| `click(target)`, `doubleClick(target)` | real pointer/mouse events, ripple |
-| `type(target, text, {clear, delay, typos, enter, click})` | `click: false` to type into an already-focused field |
-| `clear(target)`, `press(key, {times})` | Enter submits, Tab moves focus |
-| `select(target, valueOrText)` | native `<select>` only; custom dropdowns: `click` the trigger, then the option |
-| `check(target, state=true)`, `uncheck(target)` | checkbox / radio / its label; clicks only if needed |
-| `scrollTo(target \| y)`, `scrollBy(dy, {container})` | |
-| `zoom(target, seconds?, {scale, padding, follow, block})` | `zoom(8)` zooms around the cursor; no seconds = until `zoomOut()` |
-| `zoomOut()` | |
-| `circle / box / underline / arrow / spotlight / pulse(target, opts)` | `label`, `color`, `duration` (0 = until `clearHighlights()`), `block`, `padding`, `from` (arrow) |
-| `caption(text, {duration, position})`, `hideCaption()` | non-blocking |
-| `wait(ms)`, `waitFor(target)` | |
-| `run(fn)` | custom code as a step; `fn(take)` may be async; don't call chain methods inside it (use `take._approach(el)` + `take._clickAt(el)` for a click inside a loop) |
-| `set(opts)`, `showCursor()`, `hideCursor()`, `stop()`, `destroy()` | |
+| `click(t)`, `doubleClick(t)` | trusted clicks with the recorder |
+| `type(t, text, {clear, click, enter, delay})` | clears first by default. `click: false` types into the focused element |
+| `clear(t)`, `press(key, {times})` | `'Enter'`, `'Tab'`, `'Escape'`, `'ControlOrMeta+K'` |
+| `select(t, valueOrText)` | native `<select>` only. Custom dropdowns: click the trigger, then `role=option[name=…]` |
+| `check(t, state?)`, `uncheck(t)` | clicks only when needed |
+| `drag(src, dst, {to: {x, y}})` | kanban, sortable lists, sliders (`to` = fractions inside dst) |
+| `upload(t, 'file.pdf' \| [..] \| {name, content}, {drop})` | paths relative to the tour. No OS dialog |
+| `scrollTo(t \| y)`, `scrollBy(dy, {container})`, `scrollUntil(t, {container})` | `scrollUntil` for virtual lists |
+| `expect(t, {text, value, visible, count, checked, enabled, timeout})` | waits until true, otherwise fails with what it found |
+| `expectUrl(str \| re)`, `waitForUrl(…)`, `waitFor(t)`, `wait(ms)` | |
+| `zoom(t, seconds?, {scale, padding, follow, block})`, `zoom(seconds)`, `zoomOut()` | |
+| `circle / box / underline / arrow / spotlight / pulse(t, {label, color, duration, block, from})` | `duration: 0` keeps it until `clearHighlights()` |
+| `caption(text, {duration, position})`, `hideCaption()` | non-blocking; become subtitles |
+| `chapter(title)`, `thumbnail()` | chapter markers and list; thumbnail frame |
+| `run(async take => …)` | custom code. Don't queue steps inside it |
+| `set(opts)`, `use(fn, …args)`, `OneTake.define(name, fn)` | |
 
-Options: `new OneTake({ speed, typingDelay, typos, zoomScale, highlightColor, cursorSize, sound, waitTimeout, onStep, onError })`.
+Options: `speed`, `waitTimeout`, `typingDelay`, `typos`, `autoZoom`, `zoomScale`,
+`highlightColor`, `cursorIdle`, `settle`, `onStep`, `onError` ([docs/api.md](docs/api.md#options)).
 
-## Recorder
+## Recorder cheat sheet
 
 ```bash
-node tools/record.js --url <first page> --script 1.js --script 2.js --script 3.js \
-  [--storage auth.json] [--width 1440 --height 900] [--scale 2] [--fps 60] [--seed 7] \
-  [--out dir] [--name file] [--realtime] [--headed] [--max 900]
+onetake init | check | record | login        # node <one-take>/tools/cli.js … from a clone
+onetake record tour.js --url http://localhost:3000 --storage auth.json \
+  --width 1440 --height 900 --scale 2 --now 2026-11-02T09:00 \
+  --frame ocean --title "Acme" --intro "Acme|Managing clients" --outro "Try Acme|acme.example" \
+  --sound --formats mp4,gif --aspect 9:16 --name demo --out videos
 ```
-- `--script` repeated = one script per page load; the cursor position carries over.
-- `--seed` makes cursor paths and typing rhythm identical between takes.
-- `--storage` = Playwright storageState from `tools/save-login.js`.
-- `--realtime` = fast 25 fps preview without the virtual clock.
-- In frame mode `window.__OT_CAMERA === 'external'`: zoom is rendered by the recorder (sharp), not by CSS.
+
+`onetake.config.js` holds the same keys ([docs/recording.md](docs/recording.md)). The defaults
+are identical takes (`seed: 7`), frame-by-frame at 60 fps, 1920×1080 at scale 1, subtitles,
+chapters and a thumbnail. `--realtime` gives a fast live screencast. `--watch` re-runs on save.
+`node tools/record.js --script a.js --script b.js` (v1) still works.
 
 ---
 
 ## Gotchas (learned the hard way)
 
-- **Pop-ups inside a live zoom.** In live (non-recorder) mode, zoom is a CSS transform on `<body>`, so date
-  pickers / dropdowns positioned with `position: fixed/absolute` can land in the wrong place. Before opening
-  one, `if (window.__OT_CAMERA !== 'external') take.zoomOut();`. In the recorder this isn't needed.
-- **`text=` is a partial match.** `text=INQ` will happily match a sidebar link "Inquiries". Use an exact
-  function target for anything ambiguous: `() => [...document.querySelectorAll('h2')].find(e => /^INQ\d+$/.test(e.textContent.trim()))`.
-- **Hidden inputs** (custom selects keep the value in `<input type=hidden>`) can't be clicked: target the
-  visible trigger, type in its search box with `{ click: false }`, then click the option element.
-- **Date pickers**: pick dates in a future month (past days are often disabled); page the calendar with its
-  next button in a `run()` loop; range pickers usually need the end input clicked separately; close the
-  picker afterwards (many listen for `mousedown` on `document`, not `click`).
-- **Re-runs**: scripts create real records. Check unique constraints (emails, slugs) before relying on fixed
-  values, or generate a suffix.
-- **Numbers get formatted** by masked inputs (`1500` → `1,500`). Assert on what the app shows, not what you typed.
-- **One script per page load.** Anything after a navigating click is lost; put it in the next script.
-- **Keep the target project clean.** Put the kit outside the repo; if you must serve files from the app
-  (e.g. to rehearse in its pages), use an already-gitignored folder and say so. Don't change dependencies.
-- **Browsers that can reach the app**: the recorder runs where `node` runs. If the app is on the user's
-  `localhost` and you work in a sandbox that can't reach it, hand the user `bash record.sh` instead of
+- **Ambiguous text.** `text=Open` fails if three cards have an Open button. Scope it:
+  `'#card-3 >> text=Open'` or `'role=row[name*="INQ-0042"] >> text=Open'`.
+- **Custom selects** keep the value in a hidden input. Drive the visible trigger and the option.
+- **Date pickers**: use `--now` so the calendar is the same every take, scope the day to the
+  open calendar (`'.datepicker.active >> text=15'`), and use a date that isn't disabled.
+- **Masked inputs** reformat values (`1500` → `1,500`). Expect what the app shows.
+- **Re-runs create records.** Unique fields (emails, slugs) can clash. Reset the demo data at
+  the start, or see [docs/recipes.md](docs/recipes.md#re-running-tours-that-create-records).
+  The recorder seeds `Math.random`, and `--now` fixes `Date`.
+- **Code outside the chain runs again on every page load.** Keep it side-effect free, or put
+  it in `run()`.
+- **Cross-origin iframes** (Stripe, YouTube) can't be scripted. Same-origin ones can:
+  `'#frame >> label=Card'`.
+- **Live zoom** (the library on its own, not the recorder) is a CSS transform. Zoom out
+  before opening pop-ups: `if (window.__OT_CAMERA !== 'external') take.zoomOut()`.
+- **Keep the target project clean.** Put the kit outside the repo. If you must serve files
+  from the app, use an already-gitignored folder and say so. Don't change its dependencies.
+- **Where the recorder runs.** It runs where `node` runs. If the app is on the user's
+  `localhost` and your sandbox can't reach it, hand the user `bash record.sh` instead of
   pretending to render.
 
 ## Working on OneTake itself
 
-`src/NN-*.js` are the library modules (bundled to `dist/onetake.js` by `npm run build`); `tools/` is the
-recorder; `npm test` builds and plays the example end to end. Edit `src/`, never `dist/` by hand.
+`src/NN-*.js` are the library modules (bundled to `dist/onetake.js` by `npm run build`).
+`tools/` holds the recorder, CLI and renderer, and `types/` the TypeScript types. `npm test`
+runs the build, the unit tests and the smoke test; `npm run test:compat`,
+`npm run test:record` and `npm run test:visual` run the rest. Edit `src/`, never `dist/` by
+hand. Keep `docs/`, this file, `llms.txt` and `skills/` in step with the code. See
+[docs/contributing.md](docs/contributing.md).

@@ -1,5 +1,5 @@
 /*!
- * OneTake v1.0.0
+ * OneTake v2.0.0
  * Scripted, human-looking cursor, UI automation, highlights and camera zoom
  * for recording product demo videos in one take.
  * https://github.com/TharinduWijayarathna/one-take
@@ -21,16 +21,18 @@
 
   var DEFAULTS = {
     speed: 1,                 // global speed multiplier (2 = twice as fast)
-    waitTimeout: 8000,        // ms to wait for an element to appear
+    waitTimeout: 8000,        // ms to wait for an element to appear / become actionable
     startPosition: null,      // {x, y} in viewport px for the cursor; default = centre-ish
     zIndex: 2147483000,
-    onStep: null,             // function (name, args) — called before each step
-    onError: null             // function (error, stepName)
+    resumeFrom: 0,            // skip the first N steps (the recorder uses this after a page load)
+    onStep: null,             // function (name, args, info) — called before each step
+    onError: null             // function (error, stepName, info)
   };
 
   /* ---------- small helpers ---------- */
 
   function sleep(ms) { return new Promise(function (r) { setTimeout(r, Math.max(0, ms)); }); }
+  function nextFrame() { return new Promise(function (r) { requestAnimationFrame(function () { r(); }); }); }
   function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
   function rand(a, b) { return a + Math.random() * (b - a); }
   function norm(s) { return String(s == null ? '' : s).replace(/\s+/g, ' ').trim().toLowerCase(); }
@@ -40,6 +42,31 @@
       if (src) for (var k in src) if (Object.prototype.hasOwnProperty.call(src, k)) target[k] = src[k];
     }
     return target;
+  }
+
+  /** Send an event to the recorder (no-op on live pages). */
+  function report(type, data) {
+    if (typeof window.__otReport !== 'function') return;
+    try { window.__otReport(assign({ type: type }, data)); } catch (e) { /* the recorder may be gone */ }
+  }
+
+  /**
+   * "tour.js:12" for the script line that called a chain method (from the stack trace).
+   * A step queued by a helper (OneTake.define, an include) also names the tour line:
+   * "steps.js:4 ← tour.js:12".
+   */
+  function callSite() {
+    var stack = (new Error()).stack || '';
+    var lines = stack.split('\n'), sites = [];
+    for (var i = 1; i < lines.length; i++) {
+      var l = lines[i];
+      if (/onetake(\.min)?\.js/.test(l)) continue;                // frames inside the library itself
+      var m = l.match(/([^\s(@]+):(\d+):(\d+)\)?\s*$/);
+      if (m && !/^(native|<anonymous>)$/.test(m[1])) sites.push(m[1].replace(/^.*[\\/]/, '') + ':' + m[2]);
+    }
+    if (!sites.length) return null;
+    var first = sites[0], last = sites[sites.length - 1];
+    return first.split(':')[0] !== last.split(':')[0] ? first + ' ← ' + last : first;
   }
 
   /* ---------- module registry ---------- */
@@ -71,26 +98,66 @@
     this._queue = Promise.resolve();
     this._mounted = false;
     this._aborted = false;
+    this._count = 0;
     runHooks(this, 'init');
   }
 
   var P = OneTake.prototype;
 
-  /** Queue a step. Every public action goes through here, so calls chain and run in order. */
+  /** Steps whose interruption by a page load means they already did their job (the recorder skips them). */
+  var ACTION_STEPS = { click: 1, doubleClick: 1, type: 1, press: 1, select: 1, check: 1, clear: 1, drag: 1, upload: 1, run: 1 };
+
+  /**
+   * Queue a step. Every public action goes through here, so calls chain and run in order.
+   * Each step knows its index and the script line that created it, for clear errors.
+   */
   P._step = function (name, args, fn) {
-    var self = this;
+    var self = this, index = this._count++;
+    var info = { index: index, name: name, site: callSite(), arg: describeArg(args && args[0]) };
+    if (index < (this.opts.resumeFrom || 0)) {
+      if (name === 'set') assign(this.opts, args[0]);     // options still apply when resuming
+      return this;
+    }
     this._queue = this._queue.then(function () {
       if (self._aborted) throw new Error('OneTake: stopped');
       self._mount();
-      if (self.opts.onStep) self.opts.onStep(name, args);
-      return Promise.resolve(fn.call(self)).catch(function (err) {
-        if (self.opts.onError) self.opts.onError(err, name);
-        else if (!self._aborted) console.error('[OneTake] step "' + name + '" failed:', err);
+      self._current = info;
+      report('step', { index: index, name: name, site: info.site, arg: info.arg, action: !!ACTION_STEPS[name] });
+      if (self.opts.onStep) self.opts.onStep(name, args, info);
+      return Promise.resolve(fn.call(self)).then(function (v) {
+        report('stepDone', { index: index, name: name });
+        return v;
+      }, function (err) {
+        err = decorate(err, info);
+        report('error', { index: index, name: name, site: info.site, message: err.message });
+        if (self.opts.onError) self.opts.onError(err, name, info);
+        else if (!self._aborted) console.error('[OneTake] ' + err.message);
         throw err;
       });
     });
     return this;
   };
+
+  function describeArg(a) {
+    if (a == null) return '';
+    if (typeof a === 'string') return a.length > 60 ? a.slice(0, 57) + '…' : a;
+    if (typeof a === 'number') return String(a);
+    if (typeof a === 'function') return 'ƒ';
+    if (a.nodeType === 1) return '<' + a.tagName.toLowerCase() + '>';
+    return '';
+  }
+
+  /** "step 7 click("text=Save") at tour.js:23: element not found …" */
+  function decorate(err, info) {
+    if (!(err instanceof Error)) err = new Error(String(err));
+    if (err.__ot) return err;
+    var where = 'step ' + (info.index + 1) + ' ' + info.name + (info.arg ? '(' + JSON.stringify(info.arg) + ')' : '()') +
+      (info.site ? ' at ' + info.site : '');
+    err.message = where + ': ' + err.message.replace(/^OneTake[.:]\s*/, '');
+    err.__ot = true;
+    err.step = info;
+    return err;
+  }
 
   /** Makes the chain awaitable: `await take.click('#a').type('#b', 'hi')` */
   P.then = function (res, rej) { return this._queue.then(function () {}, undefined).then(res, rej); };
@@ -149,6 +216,7 @@
   P._visScale = function () { return 1; };
   P._updateHighlights = function () {};
   P._sound = function () {};
+  P._settle = function () { return Promise.resolve(); };
 
   /* ---------- basic steps ---------- */
 
@@ -167,13 +235,63 @@
     return this._step('set', arguments, function () { assign(this.opts, opts); });
   };
 
+  /** Mark the start of a chapter (written to the video's chapter list by the recorder). */
+  P.chapter = function (title) {
+    return this._step('chapter', arguments, function () { report('chapter', { title: String(title) }); });
+  };
+
+  /** Use the current frame as the video's thumbnail (recorder). */
+  P.thumbnail = function () {
+    return this._step('thumbnail', arguments, function () { report('thumbnail', {}); });
+  };
+
+  /* ---------- reusable steps ---------- */
+
+  /**
+   * Add your own chainable step made of other steps:
+   *   OneTake.define('signIn', function (take, email) {
+   *     take.type('label=Email', email).type('label=Password', 'demo1234').click('role=button[name="Sign in"]');
+   *   });
+   *   take.signIn('ada@example.com').caption('Signed in');
+   * The function runs immediately and queues its steps in place, so it can't read the page;
+   * use take.run() inside it for that.
+   */
+  OneTake.define = function (name, fn) {
+    if (typeof fn !== 'function') throw new Error('OneTake.define(' + name + ', fn): fn must be a function');
+    if (P[name] && !P[name]._defined) throw new Error('OneTake.define: "' + name + '" is a built-in step');
+    var m = function () { fn.apply(null, [this].concat([].slice.call(arguments))); return this; };
+    m._defined = true;
+    P[name] = m;
+    return OneTake;
+  };
+
+  /** Inline a group of steps: take.use(addContact, 'Priya'). Same as calling fn(take, 'Priya'). */
+  P.use = function (fn) {
+    fn.apply(null, [this].concat([].slice.call(arguments, 1)));
+    return this;
+  };
+
   OneTake.defaults = DEFAULTS;
   OneTake.feature = feature;
+  OneTake.ACTION_STEPS = ACTION_STEPS;
 
   /* ---- src/10-targets.js ---- */
   /* ==================================================================
-   * Targets: find elements by CSS selector, text=, label=, element or
-   * function, and wait for them to appear.
+   * Targets: find the element a step acts on.
+   *
+   *   '#save', '.card button'             CSS selector (first match)
+   *   'text=Save'                         exact visible text; a unique partial match is accepted;
+   *                                       several matches is an error (no guessing)
+   *   'text*=Sav'                         text contains; picks the shortest (innermost) match
+   *   'label=Email'                       form control by label / aria-label / placeholder / name
+   *   'role=button[name="Save"]'          ARIA role (implicit or explicit) + accessible name
+   *                                       ([name*="Sa"] for contains)
+   *   '#form >> text=Save'                `>>` scopes the next part inside the previous match;
+   *                                       an iframe match continues inside its document
+   *   'text=Delete >> nth=1'              pick one of several matches (0-based, -1 = last)
+   *   element / () => element             anything else
+   *
+   * Lookups pierce open shadow roots and same-origin iframes.
    * ================================================================== */
 
   var CLICKABLE = 'a[href],button,[role="button"],[role="tab"],[role="link"],[role="menuitem"],' +
@@ -184,12 +302,102 @@
     'input[type="text"],input[type="email"],input[type="password"],input[type="search"],' +
     'input[type="url"],input[type="tel"],input[type="number"]';
   var FOCUSABLE = 'input,select,textarea,button,a[href],summary,[tabindex],[contenteditable=""],[contenteditable="true"]';
+  var TEXT_PRIORITY = CLICKABLE + ',h1,h2,h3,h4,h5,h6,legend,th,dt,[role="heading"]';
+
+  function AmbiguousTarget(target, list) {
+    var shown = list.slice(0, 4).map(describeEl).join(', ') + (list.length > 4 ? ', …' : '');
+    this.message = JSON.stringify(target) + ' matches ' + list.length + ' elements: ' + shown +
+      '. Make it unique: scope it ("#form >> ' + target + '"), pick one ("' + target + ' >> nth=0")' +
+      (/^text=/.test(target) ? ', or use text*= to take the shortest match' : '') + '.';
+    this.name = 'AmbiguousTarget';
+  }
+  AmbiguousTarget.prototype = Object.create(Error.prototype);
+
+  /* ---------- documents, shadow roots and frames ---------- */
+
+  function winOf(el) { return (el.ownerDocument && el.ownerDocument.defaultView) || window; }
+  function frameOf(el) { try { return winOf(el).frameElement || null; } catch (e) { return null; } }
+
+  /** Viewport rect in the top-level document, accounting for same-origin iframes. */
+  function rectOf(el) {
+    var r = el.getBoundingClientRect(), x = r.left, y = r.top;
+    for (var f = frameOf(el); f; f = frameOf(f)) {
+      var fr = f.getBoundingClientRect();
+      x += fr.left + f.clientLeft; y += fr.top + f.clientTop;
+    }
+    return { left: x, top: y, width: r.width, height: r.height, right: x + r.width, bottom: y + r.height };
+  }
+
+  /** Offset of an element's document inside the top-level viewport. */
+  function frameOffset(el) {
+    var x = 0, y = 0;
+    for (var f = frameOf(el); f; f = frameOf(f)) {
+      var fr = f.getBoundingClientRect();
+      x += fr.left + f.clientLeft; y += fr.top + f.clientTop;
+    }
+    return { x: x, y: y };
+  }
+
+  /** `root` plus every open shadow root inside it (including root's own, if it is a shadow host). */
+  function shadowRoots(root, out) {
+    out = out || [root];
+    if (root.shadowRoot && out.indexOf(root.shadowRoot) === -1) { out.push(root.shadowRoot); shadowRoots(root.shadowRoot, out); }
+    var all = root.querySelectorAll('*');
+    for (var i = 0; i < all.length; i++) if (all[i].shadowRoot) { out.push(all[i].shadowRoot); shadowRoots(all[i].shadowRoot, out); }
+    return out;
+  }
+
+  /** querySelectorAll that falls back to searching inside shadow roots when the light DOM has no match. */
+  function deepAll(scope, selector, union) {
+    var found = Array.prototype.slice.call(scope.querySelectorAll(selector));
+    if (found.length && !union) return found;
+    var roots = shadowRoots(scope);
+    for (var i = 1; i < roots.length; i++) found = found.concat(Array.prototype.slice.call(roots[i].querySelectorAll(selector)));
+    return found;
+  }
+
+  /** Text, label and role targets look everywhere: the light DOM, every open shadow root, and the scope element itself. */
+  function deepAllWithSelf(scope, selector) {
+    var found = deepAll(scope, selector, true);
+    if (scope.nodeType === 1 && scope.matches(selector)) found.unshift(scope);
+    return found;
+  }
+
+  /** The element under a top-level viewport point, looking inside same-origin iframes and open shadow roots. */
+  function hitTest(x, y) {
+    var doc = document, el = null, ox = 0, oy = 0;
+    for (var depth = 0; depth < 8; depth++) {
+      el = doc.elementFromPoint(x - ox, y - oy);
+      while (el && el.shadowRoot && el.shadowRoot.elementFromPoint) {
+        var inner = el.shadowRoot.elementFromPoint(x - ox, y - oy);
+        if (!inner || inner === el) break;
+        el = inner;
+      }
+      if (el && el.tagName === 'IFRAME') {
+        var d = null;
+        try { d = el.contentDocument; } catch (e) { d = null; }
+        if (!d) return el;
+        var fr = el.getBoundingClientRect();
+        ox += fr.left + el.clientLeft; oy += fr.top + el.clientTop;
+        doc = d;
+        continue;
+      }
+      return el;
+    }
+    return el;
+  }
+
+  /** a contains b, across shadow roots. */
+  function deepContains(a, b) {
+    for (var n = b; n; n = n.parentNode || n.host) if (n === a) return true;
+    return false;
+  }
 
   function isVisible(el) {
     if (!el || !el.isConnected) return false;
     var r = el.getBoundingClientRect();
     if (r.width === 0 && r.height === 0) return false;
-    var cs = getComputedStyle(el);
+    var cs = winOf(el).getComputedStyle(el);
     return cs.visibility !== 'hidden' && cs.display !== 'none' && parseFloat(cs.opacity) > 0.01;
   }
 
@@ -198,65 +406,220 @@
     return el.innerText != null ? el.innerText : el.textContent;
   }
 
-  /** text=Save → best visible element whose text matches (exact first, then "contains"). */
-  function findByText(text, root) {
-    root = root || document;
-    var wanted = norm(text);
-    var groups = [CLICKABLE + ',h1,h2,h3,h4,h5,h6,legend,th,dt', '*'];
-    for (var g = 0; g < groups.length; g++) {
-      var nodes = root.querySelectorAll(groups[g]);
-      var exact = null, partial = null, partialLen = Infinity;
+  function squash(t) { return String(t == null ? '' : t).replace(/\s+/g, '').toLowerCase(); }
+  function inOverlay(el) { return !!(el.closest && el.closest('.ot-layer')); }
+
+  /** Drop matches contained in another match (keep the outermost: the link around a heading). */
+  function outermost(list) {
+    return list.filter(function (a) { return !list.some(function (b) { return b !== a && deepContains(b, a); }); });
+  }
+
+  /** Drop matches that contain another match (keep the innermost). */
+  function innermost(list) {
+    return list.filter(function (a) { return !list.some(function (b) { return b !== a && deepContains(a, b); }); });
+  }
+  function unique(list) { return list.filter(function (x, i) { return list.indexOf(x) === i; }); }
+
+  /* ---------- matchers ---------- */
+
+  /**
+   * Text matches, best first: exact text on clickable/heading elements → exact text anywhere →
+   * partial text on clickable/heading elements → partial text anywhere. mode 'contains' (text*=)
+   * returns every match, shortest text first.
+   */
+  function textMatches(scope, wanted, mode) {
+    var wantedSquashed = squash(wanted);
+    function collect(selector) {
+      var nodes = deepAllWithSelf(scope, selector), exact = [], partial = [];
       for (var i = 0; i < nodes.length; i++) {
         var el = nodes[i];
-        if (el.closest('.ot-layer')) continue;
+        if (inOverlay(el)) continue;
+        if (el.tagName !== 'INPUT' && squash(el.textContent).indexOf(wantedSquashed) === -1) continue;   // cheap pre-check
         var t = norm(textOf(el));
         if (!t || t.indexOf(wanted) === -1 || !isVisible(el)) continue;
-        if (t === wanted) { exact = el; if (g === 0) break; }
-        else if (t.length < partialLen) { partial = el; partialLen = t.length; }
+        (t === wanted ? exact : partial).push(el);
       }
-      if (exact || partial) return exact || partial;
+      return { exact: exact, partial: partial };
     }
-    return null;
+    var top = collect(TEXT_PRIORITY), any = null;
+    if (mode === 'contains') {
+      any = collect('*');
+      var all = innermost(unique(top.exact.concat(top.partial, any.exact, any.partial)));
+      return all.sort(function (a, b) { return norm(textOf(a)).length - norm(textOf(b)).length; });
+    }
+    if (top.exact.length) return outermost(top.exact);
+    any = collect('*');
+    if (any.exact.length) return innermost(any.exact);
+    if (top.partial.length) return outermost(top.partial);
+    return innermost(any.partial);
   }
 
-  /** label=Email → the form control associated with a label / aria-label / placeholder / name. */
-  function findByLabel(text, root) {
-    root = root || document;
-    var wanted = norm(text);
-    var labels = root.querySelectorAll('label');
+  function labelText(label) {
+    var copy = label.cloneNode(true);
+    Array.prototype.forEach.call(copy.querySelectorAll('select,input,textarea,button,option'), function (n) { n.remove(); });
+    return norm(copy.textContent);
+  }
+
+  function labelMatches(scope, wanted) {
+    var exact = [], prefix = [];
+    var labels = deepAll(scope, 'label', true);
     for (var i = 0; i < labels.length; i++) {
-      var l = labels[i];
-      var lt = norm(l.textContent);
-      if (lt === wanted || lt.indexOf(wanted) === 0) {
-        var ctl = l.control || (l.htmlFor && document.getElementById(l.htmlFor)) ||
-          l.querySelector('input,select,textarea');
-        if (ctl) return ctl;
-      }
+      var l = labels[i], lt = labelText(l);
+      if (lt !== wanted && lt.indexOf(wanted) !== 0) continue;
+      var ctl = l.control || (l.htmlFor && (l.getRootNode().getElementById ? l.getRootNode().getElementById(l.htmlFor) : null)) ||
+        l.querySelector('input,select,textarea');
+      if (ctl) (lt === wanted ? exact : prefix).push(ctl);
     }
-    var ctls = root.querySelectorAll('input,select,textarea,[contenteditable],[role="textbox"],[role="combobox"]');
+    var ctls = deepAll(scope, 'input,select,textarea,[contenteditable],[role="textbox"],[role="combobox"]', true);
     for (var j = 0; j < ctls.length; j++) {
       var c = ctls[j];
-      var names = [c.getAttribute('aria-label'), c.getAttribute('placeholder'), c.getAttribute('name')];
-      for (var n = 0; n < names.length; n++) if (names[n] && norm(names[n]) === wanted) return c;
+      var names = [c.getAttribute('aria-label'), c.getAttribute('placeholder'), c.getAttribute('name'), labelledBy(c)];
+      for (var n = 0; n < names.length; n++) if (names[n] && norm(names[n]) === wanted) { exact.push(c); break; }
     }
+    return unique(exact.length ? exact : prefix);
+  }
+
+  function labelledBy(el) {
+    var ids = el.getAttribute && el.getAttribute('aria-labelledby');
+    if (!ids) return null;
+    var root = el.getRootNode();
+    return ids.split(/\s+/).map(function (id) { var n = root.getElementById ? root.getElementById(id) : null; return n ? n.textContent : ''; }).join(' ');
+  }
+
+  var ROLE_SELECTORS = {
+    button: 'button,input[type=button],input[type=submit],input[type=reset],[role=button]',
+    link: 'a[href],[role=link]',
+    textbox: TEXTY + ',[role=textbox]',
+    checkbox: 'input[type=checkbox],[role=checkbox],[role=switch]',
+    radio: 'input[type=radio],[role=radio]',
+    combobox: 'select,[role=combobox]',
+    heading: 'h1,h2,h3,h4,h5,h6,[role=heading]',
+    img: 'img[alt],[role=img]',
+    dialog: 'dialog,[role=dialog],[role=alertdialog]',
+    listitem: 'li,[role=listitem]',
+    row: 'tr,[role=row]',
+    cell: 'td,[role=cell],[role=gridcell]',
+    table: 'table,[role=table],[role=grid]',
+    navigation: 'nav,[role=navigation]',
+    tab: '[role=tab]', option: 'option,[role=option]', menuitem: '[role=menuitem]'
+  };
+
+  function roleOf(el) {
+    var explicit = el.getAttribute('role');
+    if (explicit) return explicit.split(/\s+/)[0];
+    var tag = el.tagName.toLowerCase(), type = (el.getAttribute('type') || '').toLowerCase();
+    if (tag === 'button' || (tag === 'input' && /^(button|submit|reset)$/.test(type))) return 'button';
+    if (tag === 'a' && el.hasAttribute('href')) return 'link';
+    if (tag === 'input' && type === 'checkbox') return 'checkbox';
+    if (tag === 'input' && type === 'radio') return 'radio';
+    if (tag === 'select') return 'combobox';
+    if (/^h[1-6]$/.test(tag)) return 'heading';
+    if (tag === 'textarea' || el.isContentEditable || (tag === 'input' && /^(|text|email|search|url|tel|password|number)$/.test(type))) return 'textbox';
+    if (tag === 'img') return 'img';
+    if (tag === 'dialog') return 'dialog';
+    if (tag === 'li') return 'listitem';
+    if (tag === 'tr') return 'row';
+    if (tag === 'td') return 'cell';
+    if (tag === 'table') return 'table';
+    if (tag === 'nav') return 'navigation';
+    if (tag === 'option') return 'option';
     return null;
   }
 
-  function queryTarget(target) {
-    if (!target) return null;
-    if (typeof target === 'function') return target();
-    if (target.nodeType === 1) return target;
-    if (typeof target === 'string') {
-      if (target.indexOf('text=') === 0) return findByText(target.slice(5));
-      if (target.indexOf('label=') === 0) return findByLabel(target.slice(6));
-      return document.querySelector(target);
+  function accessibleName(el) {
+    var n = labelledBy(el) || el.getAttribute('aria-label');
+    if (n) return norm(n);
+    var tag = el.tagName;
+    if ((tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA') && el.labels && el.labels.length) return labelText(el.labels[0]);
+    if (tag === 'IMG') return norm(el.getAttribute('alt'));
+    if (tag === 'INPUT' && /^(button|submit|reset)$/i.test(el.type)) return norm(el.value);
+    if (tag === 'INPUT' || tag === 'TEXTAREA') return norm(el.getAttribute('placeholder') || el.getAttribute('title'));
+    return norm(el.innerText || el.textContent || el.getAttribute('title'));
+  }
+
+  /** Close relatives a role target also accepts: role=checkbox finds switches, role=dialog alert dialogs… */
+  var ROLE_ALIASES = { checkbox: 'switch', dialog: 'alertdialog', table: 'grid', cell: 'gridcell' };
+
+  function roleMatches(scope, spec) {
+    var m = spec.match(/^([a-z]+)(?:\[name(\*?)=(["'])(.*)\3\])?$/i);
+    if (!m) throw new Error('Bad role target "role=' + spec + '". Use role=button or role=button[name="Save"].');
+    var role = m[1].toLowerCase(), contains = m[2] === '*', name = m[4] != null ? norm(m[4]) : null;
+    var nodes = deepAllWithSelf(scope, ROLE_SELECTORS[role] || '[role="' + role + '"]');
+    return nodes.filter(function (el) {
+      if (inOverlay(el) || !isVisible(el)) return false;
+      var r = roleOf(el);
+      if (r !== role && ROLE_ALIASES[role] !== r) return false;
+      if (name == null) return true;
+      var an = accessibleName(el);
+      return contains ? an.indexOf(name) !== -1 : an === name;
+    });
+  }
+
+  /* ---------- resolution ---------- */
+
+  /** Every element a target matches, in order. */
+  function resolveAll(target) {
+    if (!target) return [];
+    if (typeof target === 'function') { var r = target(); return r ? (r.nodeType ? [r] : Array.prototype.slice.call(r)) : []; }
+    if (target.nodeType === 1) return [target];
+    if (typeof target !== 'string') return [];
+    var parts = target.split(/\s+>>\s+/), list = null;
+    for (var i = 0; i < parts.length; i++) {
+      var part = parts[i].trim(), m;
+      if ((m = part.match(/^nth=(-?\d+)$/))) {
+        if (!list) throw new Error('"nth=" needs something before it, e.g. "text=Delete >> nth=1".');
+        var k = +m[1]; list = [list[k < 0 ? list.length + k : k]].filter(Boolean);
+        continue;
+      }
+      var scopes = list ? list.map(function (el) {
+        if (el.tagName === 'IFRAME') { try { return el.contentDocument; } catch (e) { return null; } }
+        return el;
+      }).filter(Boolean) : [document];
+      var next = [];
+      for (var s = 0; s < scopes.length; s++) next = next.concat(matchPart(scopes[s], part));
+      list = unique(next);
+      if (!list.length) return [];
     }
-    return null;
+    return list || [];
+  }
+
+  /** 'text="Save"' and "text='Save'" work like text=Save (Playwright habit). */
+  function unquote(s) { s = s.trim(); return /^(["']).*\1$/.test(s) ? s.slice(1, -1) : s; }
+
+  function matchPart(scope, part) {
+    if (part.indexOf('text*=') === 0) return textMatches(scope, norm(unquote(part.slice(6))), 'contains');
+    if (part.indexOf('text=') === 0) return textMatches(scope, norm(unquote(part.slice(5))), 'exact');
+    if (part.indexOf('label=') === 0) return labelMatches(scope, norm(unquote(part.slice(6))));
+    if (part.indexOf('role=') === 0) return roleMatches(scope, part.slice(5).trim());
+    if (part.indexOf('css=') === 0) part = part.slice(4);
+    return deepAll(scope, part);
+  }
+
+  /** The single element a target points at, null if none yet; throws if a text/label/role target is ambiguous. */
+  function queryTarget(target) {
+    var list = resolveAll(target);
+    if (list.length <= 1) return list[0] || null;
+    var last = typeof target === 'string' ? target.split(/\s+>>\s+/).pop().trim() : '';
+    if (/^(text=|label=|role=)/.test(last)) {
+      var shown = list.filter(isVisible);
+      if (shown.length === 1) return shown[0];
+      throw new AmbiguousTarget(target, list);
+    }
+    return list[0];
+  }
+
+  function describeEl(el) {
+    if (!el || !el.tagName) return String(el);
+    var t = (el.innerText || el.value || '').trim().replace(/\s+/g, ' ');
+    return '<' + el.tagName.toLowerCase() + (el.id ? '#' + el.id : '') +
+      (el.classList && el.classList.length ? '.' + Array.prototype.slice.call(el.classList, 0, 2).join('.') : '') + '>' +
+      (t ? ' "' + (t.length > 24 ? t.slice(0, 23) + '…' : t) + '"' : '');
   }
 
   function describe(target) {
     if (typeof target === 'string') return target;
-    if (target && target.nodeType === 1) return '<' + target.tagName.toLowerCase() + (target.id ? '#' + target.id : '') + '>';
+    if (target && target.nodeType === 1) return describeEl(target);
+    if (typeof target === 'function') return 'function target';
     return String(target);
   }
 
@@ -270,7 +633,10 @@
         var el = null;
         try { el = queryTarget(target); } catch (e) { return reject(e); }
         if (el && isVisible(el)) return resolve(el);
-        if (performance.now() - t0 > timeout) return reject(new Error('OneTake: element not found or not visible: ' + describe(target)));
+        if (performance.now() - t0 > timeout) {
+          return reject(new Error((el ? 'element is not visible: ' : 'element not found: ') + describe(target) +
+            ' (waited ' + Math.round(timeout / 1000) + ' s)'));
+        }
         setTimeout(poll, 60);
       })();
     });
@@ -281,8 +647,10 @@
     return this._step('waitFor', arguments, function () { return this._resolve(target, o && o.timeout); });
   };
 
-  OneTake.findByText = findByText;
-  OneTake.findByLabel = findByLabel;
+  OneTake.resolveAll = resolveAll;
+  OneTake.query = queryTarget;
+  OneTake.findByText = function (text, root) { try { return textMatches(root || document, norm(text), 'exact')[0] || null; } catch (e) { return null; } };
+  OneTake.findByLabel = function (text, root) { return labelMatches(root || document, norm(text))[0] || null; };
 
   /* ---- src/20-cursor.js ---- */
   /* ==================================================================
@@ -307,11 +675,14 @@
       cursorSize: 28,           // px
       cursorColor: '#111827',
       cursorOutline: '#ffffff',
-      hideNativeCursor: true    // hide the real mouse pointer while the demo runs
+      hideNativeCursor: true,   // hide the real mouse pointer while the demo runs
+      cursorIdle: 0,            // ms without movement before the cursor fades out (0 = never)
+      cursorBlur: true          // a touch of motion blur on fast moves
     },
     css: function (o) {
       return '.ot-cursor{position:absolute;left:0;top:0;z-index:4;width:' + o.cursorSize + 'px;height:' + o.cursorSize + 'px;opacity:0;transition:opacity .25s ease;will-change:transform;filter:drop-shadow(0 2px 3px rgba(0,0,0,.35));}' +
         '.ot-cursor.ot-visible{opacity:1;}' +
+        '.ot-cursor.ot-visible.ot-idle{opacity:0;transition:opacity .6s ease;}' +
         '.ot-cursor-inner{width:100%;height:100%;transition:transform .09s ease;}' +
         '.ot-cursor.ot-pressed .ot-cursor-inner{transform:scale(.82);}' +
         'html.ot-hide-native,html.ot-hide-native *{cursor:none!important;}';
@@ -332,6 +703,7 @@
 
   /** Place the cursor. Positions are layout coordinates; the camera maps them to the screen. */
   P._setPos = function (x, y) {
+    var prev = this.pos, now = performance.now();
     this.pos = { x: x, y: y };
     if (!this._cursor) return;
     var v = this._toVisual(x, y), z = this._visScale();
@@ -339,6 +711,24 @@
     this._cursor.style.transformOrigin = (h[0] * k) + 'px ' + (h[1] * k) + 'px';
     this._cursor.style.transform = 'translate3d(' + (v.x - h[0] * k) + 'px,' + (v.y - h[1] * k) + 'px,0)' +
       (z !== 1 ? ' scale(' + z.toFixed(4) + ')' : '');
+    if (prev && (prev.x !== x || prev.y !== y)) this._cursorMoved(prev, now);
+  };
+
+  /** Motion blur on fast moves, and the idle fade-out. */
+  P._cursorMoved = function (prev, now) {
+    var o = this.opts, c = this._cursor;
+    if (o.cursorBlur) {
+      var dt = Math.max(1, now - (this._lastMoveAt || now - 16));
+      var speed = Math.hypot(this.pos.x - prev.x, this.pos.y - prev.y) / dt;   // px per ms
+      var blur = clamp((speed - 1.1) * 0.55, 0, 1.6);
+      c.style.filter = 'drop-shadow(0 2px 3px rgba(0,0,0,.35))' + (blur > 0.05 ? ' blur(' + blur.toFixed(2) + 'px)' : '');
+    }
+    this._lastMoveAt = now;
+    if (o.cursorIdle > 0) {
+      c.classList.remove('ot-idle');
+      clearTimeout(this._idleTimer);
+      this._idleTimer = setTimeout(function () { c.style.filter = ''; c.classList.add('ot-idle'); }, o.cursorIdle);
+    }
   };
 
   P._setKind = function (kind, force) {
@@ -356,7 +746,7 @@
   };
 
   /** The page element under a layout point. */
-  P._hit = function (x, y) { var v = this._toVisual(x, y); return document.elementFromPoint(v.x, v.y); };
+  P._hit = function (x, y) { var v = this._toVisual(x, y); return hitTest(v.x, v.y); };
 
   P.showCursor = function () {
     return this._step('showCursor', arguments, function () { this._cursor.classList.add('ot-visible'); return sleep(260); });
@@ -401,11 +791,21 @@
       clientX: x, clientY: y, screenX: x + (window.screenX || 0), screenY: y + (window.screenY || 0),
       button: 0, buttons: 0, pointerId: 1, pointerType: 'mouse', isPrimary: true }, extra);
   }
+  /** Dispatch a synthetic pointer/mouse event; coordinates are converted for elements inside iframes. */
   function fire(el, type, init) {
     if (!el) return true;
-    var Ctor = /^pointer/.test(type) && window.PointerEvent ? PointerEvent : MouseEvent;
+    var w = winOf(el);
+    if (el.ownerDocument !== document) {
+      var off = frameOffset(el);
+      init = assign({}, init, { view: w, clientX: init.clientX - off.x, clientY: init.clientY - off.y });
+    }
+    var Ctor = /^pointer/.test(type) && w.PointerEvent ? w.PointerEvent : w.MouseEvent;
     return el.dispatchEvent(new Ctor(type, init));
   }
+
+  /** True when the recorder drives the real mouse and keyboard (trusted input). */
+  P._real = function () { return this.opts.realInput !== false && typeof window.__otInput === 'function'; };
+  P._input = function (msg) { return window.__otInput(msg); };
 
   feature({
     defaults: {
@@ -437,8 +837,13 @@
   P._hoverAt = function (lx, ly, move) {
     var hit = this._hit(lx, ly);
     var vis = this._toVisual(lx, ly), x = vis.x, y = vis.y; // events carry on-screen coordinates
+    if (this._real()) {                                     // the real mouse hovers natively
+      if (move) this._input({ type: 'move', x: x, y: y });
+      if (hit !== this._hoverSet[0]) { this._hoverSet = hit ? [hit] : []; this._setKind(this._kindFor(hit)); }
+      return hit;
+    }
     var chain = [];
-    for (var n = hit; n && n.nodeType === 1; n = n.parentElement) chain.push(n);
+    for (var n = hit; n && n.nodeType === 1; n = n.parentElement || (n.parentNode && n.parentNode.host)) chain.push(n);
     var prevTop = this._hoverSet[0];
     if (hit !== prevTop) {
       var init = mouseInit(x, y);
@@ -452,7 +857,7 @@
       this._setHover(chain);
       this._setKind(this._kindFor(hit));
     }
-    if (move && hit) { var mi = mouseInit(x, y); fire(hit, 'pointermove', mi); fire(hit, 'mousemove', mi); }
+    if (move && hit) { var mi = mouseInit(x, y, this._dragHeld ? { buttons: 1 } : null); fire(hit, 'pointermove', mi); fire(hit, 'mousemove', mi); }
     return hit;
   };
 
@@ -532,7 +937,7 @@
 
   /** Pick a natural point inside an element (not dead-centre), in layout coordinates. */
   P._pointIn = function (el, o) {
-    var r = el.getBoundingClientRect(), p;
+    var r = rectOf(el), p;
     if (o && o.position && typeof o.position === 'object') {
       p = { x: r.left + r.width * o.position.x, y: r.top + r.height * o.position.y };
     } else {
@@ -587,22 +992,28 @@
     }
   });
 
+  function parentOf(n) { return n.parentElement || (n.parentNode && n.parentNode.host) || null; }
+
+  /** Every container that scrolls `el` into view: its scrollable ancestors, through shadow roots and iframes. */
   function scrollersOf(el) {
-    var list = [], se = document.scrollingElement || document.documentElement;
-    for (var n = el.parentElement; n; n = n.parentElement) {
-      if (n === se || n === document.body) continue;
-      var cs = getComputedStyle(n);
-      if (/(auto|scroll|overlay)/.test(cs.overflowY + ' ' + cs.overflowX) &&
-          (n.scrollHeight > n.clientHeight || n.scrollWidth > n.clientWidth)) list.push(n);
+    var list = [];
+    for (var cur = el; cur; cur = frameOf(cur)) {
+      var doc = cur.ownerDocument, se = doc.scrollingElement || doc.documentElement;
+      for (var n = parentOf(cur); n; n = parentOf(n)) {
+        if (n === se || n === doc.body || n.nodeType !== 1) continue;
+        var cs = winOf(n).getComputedStyle(n);
+        if (/(auto|scroll|overlay)/.test(cs.overflowY + ' ' + cs.overflowX) &&
+            (n.scrollHeight > n.clientHeight || n.scrollWidth > n.clientWidth)) list.push(n);
+      }
+      list.push(se);
     }
-    list.push(se);
     return list;
   }
   function scrollPositions(boxes) { return boxes.map(function (b) { return [b.scrollLeft, b.scrollTop]; }); }
   function easeInOutCubic(t) { return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2; }
 
   P._ensureInView = function (el, o) {
-    var r = el.getBoundingClientRect(), m = 40;
+    var r = rectOf(el), m = 40;
     var inView = r.top >= m && r.bottom <= innerHeight - m && r.left >= 0 && r.right <= innerWidth;
     if (inView && !(o && o.force)) return Promise.resolve();
     var block = (o && o.block) || 'center';
@@ -683,15 +1094,343 @@
     });
   };
 
-  /* ---- src/60-click.js ---- */
+  /* ---- src/55-actionable.js ---- */
   /* ==================================================================
-   * Click: real pointer/mouse event sequences with a press animation and a
-   * ripple, plus double-click and checkbox / radio helpers.
+   * Actionability: before a click, type, check, select, drag or upload,
+   * wait until the element is
+   *   visible · enabled · not moving · the thing actually under the cursor point
+   * (not covered by a modal, toast or overlay). If it never gets there, fail with
+   * the reason, e.g. "covered by <div.modal-backdrop>". `force: true` skips the checks.
+   * ================================================================== */
+
+  function isDisabled(el) {
+    if (el.matches && el.matches(':disabled')) return true;           // includes controls in a disabled <fieldset>
+    return !!(el.closest && el.closest('[aria-disabled="true"]'));
+  }
+
+  /** The element (or something inside it, or its label) is what receives events at this point. */
+  function receives(el, hit) {
+    if (!hit) return false;
+    if (hit === el || deepContains(el, hit)) return true;
+    if (el.labels) for (var i = 0; i < el.labels.length; i++) if (el.labels[i] === hit || deepContains(el.labels[i], hit)) return true;
+    if (hit.tagName === 'LABEL' && hit.control === el) return true;
+    return false;
+  }
+
+  /** A point (top-level visual coords) on the element that really receives events, or why there isn't one. */
+  P._pickPoint = function (el, o) {
+    var r = rectOf(el), pts = [];
+    if (o && o.position && typeof o.position === 'object') pts.push([r.left + r.width * o.position.x, r.top + r.height * o.position.y]);
+    else {
+      var jx = r.width > 40 ? rand(-0.18, 0.18) * r.width : 0;
+      var jy = r.height > 30 ? rand(-0.15, 0.15) * r.height : 0;
+      if (el.matches && el.matches(TEXTY) && r.width > 120) jx = rand(-0.3, -0.1) * r.width;
+      pts.push([r.left + r.width / 2 + jx, r.top + r.height / 2 + jy]);
+    }
+    pts.push([r.left + r.width / 2, r.top + r.height / 2],
+      [r.left + r.width * 0.25, r.top + r.height / 2], [r.left + r.width * 0.75, r.top + r.height / 2],
+      [r.left + r.width / 2, r.top + r.height * 0.25], [r.left + r.width / 2, r.top + r.height * 0.75]);
+    var firstHit = null;
+    for (var i = 0; i < pts.length; i++) {
+      var x = clamp(pts[i][0], 1, innerWidth - 1), y = clamp(pts[i][1], 1, innerHeight - 1);
+      var hit = hitTest(x, y);
+      if (receives(el, hit)) return { ok: true, x: x, y: y };
+      if (!firstHit) firstHit = hit;
+    }
+    return { ok: false, hit: firstHit };
+  };
+
+  /** Wait until `el` can be acted on; resolves with a layout point to move the cursor to. */
+  P._waitActionable = function (el, o) {
+    o = o || {};
+    var self = this, t0 = performance.now(), last = null;
+    var timeout = o.timeout != null ? o.timeout : this.opts.waitTimeout;
+    var verb = o.verb || 'click';
+    return new Promise(function (resolve, reject) {
+      (function poll() {
+        if (self._aborted) return reject(new Error('OneTake: stopped'));
+        var reason;
+        if (!el.isConnected) { var gone = new Error('cannot ' + verb + ' ' + describeEl(el) + ': it was removed from the page'); gone.stale = true; return reject(gone); }
+        if (!isVisible(el)) reason = 'it is not visible';
+        else if (o.enabled !== false && isDisabled(el)) reason = 'it is disabled';
+        else {
+          var r = rectOf(el), key = [r.left, r.top, r.width, r.height].map(Math.round).join(',');
+          if (key !== last) { last = key; reason = 'it is still moving'; }
+          else {
+            var pt = self._pickPoint(el, o);
+            if (pt.ok) { var l = self._toLayout(pt.x, pt.y); return resolve({ x: l.x, y: l.y }); }
+            reason = 'it is covered by ' + describeEl(pt.hit);
+          }
+        }
+        if (performance.now() - t0 > timeout) {
+          return reject(new Error('cannot ' + verb + ' ' + describeEl(el) + ': ' + reason + ' (waited ' + Math.round(timeout / 1000) + ' s)'));
+        }
+        requestAnimationFrame(poll);
+      })();
+    });
+  };
+
+  /**
+   * Resolve + bring into view + (for actions) wait until actionable + move the cursor onto it.
+   * Re-checks after the move, because hover effects can shift layouts. Resolves with the element.
+   */
+  P._approach = function (target, o) {
+    var self = this, rounds = 0;
+    o = o || {};
+    var stale = function (el) {
+      if (el.isConnected) return;
+      var e = new Error('cannot ' + (o.verb || 'reach') + ' ' + describeEl(el) + ': it was removed from the page (the app re-rendered it)');
+      e.stale = true;
+      throw e;
+    };
+    function go() {
+      return self._resolve(target, o.timeout).then(function (el) {
+        return self._ensureInView(el).then(function () {
+          stale(el);
+          if (!o.actionable || o.force) {
+            var p = self._pointIn(el, o);
+            return self._moveToPoint(p.x, p.y, o).then(function () { return el; });
+          }
+          var tries = 0;
+          return (function attempt() {
+            return self._waitActionable(el, o).then(function (pt) {
+              return self._moveToPoint(pt.x, pt.y, o).then(function () {
+                stale(el);
+                var v = self._toVisual(self.pos.x, self.pos.y);
+                if (receives(el, hitTest(v.x, v.y)) || ++tries >= 3) return el;
+                return attempt();                               // something moved under the cursor: aim again
+              });
+            });
+          })();
+        });
+      }).catch(function (e) {
+        // The app re-rendered the element (virtual lists, React keys): find it again and re-aim.
+        if (e && e.stale && !(target && target.nodeType) && ++rounds < 4) return go();
+        throw e;
+      });
+    }
+    return go();
+  };
+
+  /* ---- src/57-settle.js ---- */
+  /* ==================================================================
+   * Settle: after an action (click, type, select, check, Enter, drag, upload)
+   * wait until the app is idle: no fetch / XHR in flight and no DOM changes for
+   * `settleQuiet` ms (capped at `settleTimeout`). This replaces guessed sleeps for
+   * Livewire, React, Vue, htmx, … apps. Pages that never stop changing the DOM
+   * (tickers, carousels) are detected and only network activity is awaited.
    * ================================================================== */
 
   feature({
     defaults: {
-      clickColor: 'rgba(59,130,246,0.45)'
+      settle: true,             // wait for the app to go idle after actions
+      settleQuiet: 200,         // ms without network or DOM activity that counts as idle
+      settleTimeout: 4000       // never wait longer than this (then carry on)
+    },
+    mount: function () { if (this.opts.settle) track(window); }
+  });
+
+  var ACTIVITY = { pending: 0, last: 0, dom: 0, installed: false };
+
+  function track(win) {
+    if (ACTIVITY.installed) return;
+    ACTIVITY.installed = true;
+    var now = function () { return performance.now(); };
+    var begin = function () { ACTIVITY.pending++; ACTIVITY.last = now(); };
+    var end = function () { ACTIVITY.pending = Math.max(0, ACTIVITY.pending - 1); ACTIVITY.last = now(); };
+
+    if (win.fetch) {
+      var realFetch = win.fetch;
+      win.fetch = function () {
+        begin();
+        var p;
+        try { p = realFetch.apply(this, arguments); } catch (e) { end(); throw e; }
+        return p.then(function (r) { end(); return r; }, function (e) { end(); throw e; });
+      };
+    }
+    var XHR = win.XMLHttpRequest && win.XMLHttpRequest.prototype;
+    if (XHR) {
+      var send = XHR.send;
+      XHR.send = function () {
+        begin();
+        var done = false, self = this;
+        this.addEventListener('loadend', function () { if (!done) { done = true; end(); } });
+        try { return send.apply(self, arguments); } catch (e) { if (!done) { done = true; end(); } throw e; }
+      };
+    }
+    if (win.MutationObserver) {
+      var strip = function (v) { return String(v || '').replace(/\bot-[\w-]+/g, '').replace(/\s+/g, ' ').trim(); };
+      new win.MutationObserver(function (records) {
+        for (var i = 0; i < records.length; i++) {
+          var r = records[i], t = r.target.nodeType === 1 ? r.target : r.target.parentElement;
+          if (t && t.closest && t.closest('.ot-layer')) continue;                       // our own overlay
+          if (r.type === 'attributes' && r.attributeName === 'class' &&
+              strip(r.oldValue) === strip(t && t.getAttribute('class'))) continue;       // our hover classes
+          if (r.type === 'attributes' && r.attributeName === 'style' && t === document.body) continue; // live camera
+          ACTIVITY.dom = now();
+          return;
+        }
+      }).observe(win.document.documentElement, { subtree: true, childList: true, attributes: true, characterData: true, attributeOldValue: true });
+    }
+  }
+
+  /** Wait until the app is idle (see above). Resolves with the ms waited. */
+  P._settle = function (o) {
+    var opts = this.opts, self = this;
+    if (!opts.settle || (o && o.settle === false)) return Promise.resolve(0);
+    track(window);
+    var quiet = Math.max(60, (o && o.settleQuiet) || opts.settleQuiet), timeout = (o && o.settleTimeout) || opts.settleTimeout;
+    var t0 = performance.now();
+    return sleep(40).then(function () {
+      return new Promise(function (resolve) {
+        (function poll() {
+          var now = performance.now();
+          var lastActivity = Math.max(ACTIVITY.last, self._domNoisy >= 2 ? 0 : ACTIVITY.dom);
+          if (self._aborted || (ACTIVITY.pending === 0 && now - lastActivity >= quiet)) return resolve(now - t0);
+          if (now - t0 >= timeout) {
+            if (ACTIVITY.pending === 0) self._domNoisy = (self._domNoisy || 0) + 1;        // only the DOM kept changing
+            if (self._domNoisy === 2) console.warn('[OneTake] this page keeps changing its DOM; settling now waits for network only');
+            return resolve(now - t0);
+          }
+          setTimeout(poll, 40);
+        })();
+      });
+    });
+  };
+
+  OneTake.activity = ACTIVITY;
+
+  /* ---- src/58-expect.js ---- */
+  /* ==================================================================
+   * Assertions and waits, so a broken take fails loudly instead of
+   * rendering the wrong video:
+   *   take.expect('text=Inquiry created')                       visible (default)
+   *   take.expect('#total', { text: '£4,000' })                 text contains (or a RegExp)
+   *   take.expect('label=Email', { value: 'a@b.co' })           input value (or a RegExp)
+   *   take.expect('.toast', { visible: false })                 gone / hidden
+   *   take.expect('tbody tr', { count: 3 })                     number of visible matches
+   *   take.expect('#n-weekly', { checked: true }) · { enabled: false }
+   *   take.expectUrl(/\/inquiries\/\w+$/) · take.waitForUrl('/dashboard')
+   *   take.scrollUntil('text=Row 250', { container: '.grid' })  virtualised / long lists
+   * ================================================================== */
+
+  function matchesText(actual, wanted) {
+    if (wanted instanceof RegExp) return wanted.test(actual);
+    return norm(actual).indexOf(norm(wanted)) !== -1;
+  }
+  function matchesValue(actual, wanted) {
+    if (wanted instanceof RegExp) return wanted.test(actual);
+    return String(actual) === String(wanted);
+  }
+  function show(v) { return v instanceof RegExp ? String(v) : JSON.stringify(v); }
+
+  /** One evaluation of an expectation: { ok, why }. */
+  function evaluateExpect(target, a) {
+    var list;
+    try { list = resolveAll(target); } catch (e) { return { ok: false, why: e.message }; }
+    var visible = list.filter(isVisible);
+    if (a.count != null) {
+      return visible.length === a.count ? { ok: true } : { ok: false, why: 'found ' + visible.length + ' visible (of ' + list.length + ')' };
+    }
+    if (a.visible === false) return visible.length ? { ok: false, why: 'it is still visible: ' + describeEl(visible[0]) } : { ok: true };
+    if (!visible.length) return { ok: false, why: list.length ? 'it exists but is hidden' : 'it is not on the page' };
+    var last = null;
+    for (var i = 0; i < visible.length; i++) {
+      var el = visible[i], why = null;
+      if (a.text != null && !matchesText(textOf(el), a.text)) why = 'its text is ' + JSON.stringify(norm(textOf(el)).slice(0, 80));
+      else if (a.value != null && !matchesValue(el.value, a.value)) why = 'its value is ' + JSON.stringify(el.value);
+      else if (a.checked != null && !!el.checked !== !!a.checked) why = 'it is ' + (el.checked ? '' : 'not ') + 'checked';
+      else if (a.enabled != null && isDisabled(el) === !!a.enabled) why = 'it is ' + (isDisabled(el) ? 'disabled' : 'enabled');
+      if (!why) return { ok: true };
+      last = why;
+    }
+    return { ok: false, why: last };
+  }
+
+  function describeExpect(target, a) {
+    var parts = [];
+    if (a.count != null) parts.push('match ' + a.count + ' visible element' + (a.count === 1 ? '' : 's'));
+    else if (a.visible === false) parts.push('be hidden or gone');
+    else {
+      parts.push('be visible');
+      if (a.text != null) parts.push('contain text ' + show(a.text));
+      if (a.value != null) parts.push('have value ' + show(a.value));
+      if (a.checked != null) parts.push(a.checked ? 'be checked' : 'not be checked');
+      if (a.enabled != null) parts.push(a.enabled ? 'be enabled' : 'be disabled');
+    }
+    return 'expected ' + describe(target) + ' to ' + parts.join(' and ');
+  }
+
+  function poll(self, check, timeout, fail) {
+    var t0 = performance.now();
+    return new Promise(function (resolve, reject) {
+      (function again() {
+        if (self._aborted) return reject(new Error('OneTake: stopped'));
+        var r = check();
+        if (r.ok) return resolve();
+        if (performance.now() - t0 > timeout) return reject(new Error(fail(r.why)));
+        setTimeout(again, 60);
+      })();
+    });
+  }
+
+  P.expect = function (target, a) {
+    a = a || {};
+    return this._step('expect', arguments, function () {
+      var timeout = a.timeout != null ? a.timeout : this.opts.waitTimeout;
+      return poll(this, function () { return evaluateExpect(target, a); }, timeout, function (why) {
+        return describeExpect(target, a) + ', but ' + why + ' (waited ' + Math.round(timeout / 1000) + ' s)';
+      });
+    });
+  };
+
+  function urlStep(name) {
+    return function (pattern, o) {
+      return this._step(name, arguments, function () {
+        var timeout = (o && o.timeout) != null ? o.timeout : this.opts.waitTimeout;
+        var test = pattern instanceof RegExp ? function (u) { return pattern.test(u); } : function (u) { return u.indexOf(String(pattern)) !== -1; };
+        return poll(this, function () { return { ok: test(location.href), why: 'it is ' + location.href }; }, timeout, function (why) {
+          return 'expected the URL to ' + (pattern instanceof RegExp ? 'match ' : 'contain ') + show(pattern) + ', but ' + why;
+        });
+      });
+    };
+  }
+  P.expectUrl = urlStep('expectUrl');
+  P.waitForUrl = urlStep('waitForUrl');
+
+  /** Scroll a container (default: the page) step by step until the target appears. For long or virtualised lists. */
+  P.scrollUntil = function (target, o) {
+    o = o || {};
+    return this._step('scrollUntil', arguments, function () {
+      var self = this, max = o.maxScrolls || 40, n = 0;
+      function found() { try { var el = queryTarget(target); return el && isVisible(el) ? el : null; } catch (e) { return null; } }
+      return (function step() {
+        var el = found();
+        if (el) return self._ensureInView(el, { force: true });
+        var box = o.container ? queryTarget(o.container) : (document.scrollingElement || document.documentElement);
+        if (!box) throw new Error('scroll container not found: ' + describe(o.container));
+        var maxTop = box.scrollHeight - box.clientHeight;
+        if (box.scrollTop >= maxTop - 1) throw new Error('scrolled to the end but never found ' + describe(target));
+        if (n++ >= max) throw new Error('scrolled ' + max + ' times without finding ' + describe(target) + ' (raise maxScrolls, or use a smaller step for virtual lists)');
+        var dy = o.step || box.clientHeight * 0.8;
+        return self._animateScroll([box], [[box.scrollLeft, clamp(box.scrollTop + dy, 0, maxTop)]], { duration: o.duration || 500 })
+          .then(function () { return sleep(120 / self.opts.speed); }).then(step);
+      })();
+    });
+  };
+
+  /* ---- src/60-click.js ---- */
+  /* ==================================================================
+   * Click: a press animation and ripple, and either the real mouse (when the
+   * recorder drives the browser: trusted events, native hover, focus, dropdowns)
+   * or a faithful synthetic pointer/mouse sequence on live pages.
+   * Actions wait for the element to be actionable and for the app to settle.
+   * ================================================================== */
+
+  feature({
+    defaults: {
+      clickColor: 'rgba(59,130,246,0.45)',
+      realInput: true           // use trusted mouse/keyboard input when the recorder offers it
     },
     css: function (o) {
       return '.ot-fx{position:absolute;inset:0;z-index:2;}' +
@@ -708,50 +1447,68 @@
     setTimeout(function () { d.remove(); }, 700);
   };
 
-  /** Press and release at the cursor's current position. */
+  /** Press and release at the cursor's current position. o: { double, button, real: false } */
   P._clickAt = function (el, o) {
     o = o || {};
     var self = this, sp = this.opts.speed;
-    var hit = this._hit(this.pos.x, this.pos.y);
     var vis = this._toVisual(this.pos.x, this.pos.y), x = vis.x, y = vis.y;
-    if (!hit || (el && !el.contains(hit) && !hit.contains(el))) hit = el; // be forgiving about overlays
+    var real = this._real() && o.real !== false;
+    var hit = real ? null : this._hit(this.pos.x, this.pos.y);
+    if (!real && (!hit || (el && !receives(el, hit)))) hit = el;
     var count = o.double ? 2 : 1;
+    var auto = this._autoZoomTo ? this._autoZoomTo(this.pos) : Promise.resolve();
+
+    function pressVisual() { self._cursor.classList.add('ot-pressed'); self._sound('click'); report('click', { x: x, y: y }); self._ripple(x, y); }
+    function releaseVisual() { self._cursor.classList.remove('ot-pressed'); }
+
     function once(i) {
+      if (o.visualOnly) {
+        pressVisual();
+        return sleep(rand(80, 120) / sp).then(releaseVisual);
+      }
+      if (real) {
+        pressVisual();
+        return self._input({ type: 'click', x: x, y: y, button: o.button || 'left', clickCount: i + 1 })
+          .then(function () { return sleep(rand(60, 100) / sp); }).then(releaseVisual);
+      }
       var down = mouseInit(x, y, { buttons: 1, detail: i + 1 });
-      self._cursor.classList.add('ot-pressed');
-      self._sound('click');
+      pressVisual();
       fire(hit, 'pointerdown', down);
       var proceed = fire(hit, 'mousedown', down);
       if (proceed) {
         // Real mouse clicks focus form fields but don't show focus rings on links/buttons.
         var f = hit.closest && hit.closest(TEXTY + ',select');
-        if (f && f !== document.activeElement) f.focus({ preventScroll: true });
-        else if (!f && document.activeElement && document.activeElement !== document.body &&
-                 !document.activeElement.contains(hit)) document.activeElement.blur();
+        var active = hit.ownerDocument.activeElement;
+        if (f && f !== active) f.focus({ preventScroll: true });
+        else if (!f && active && active !== hit.ownerDocument.body && !active.contains(hit)) active.blur();
       }
       self._hoverSet.forEach(function (e) { e.classList.add('ot-active'); });
-      self._ripple(x, y);
       return sleep(rand(70, 120) / sp).then(function () {
         var up = mouseInit(x, y, { detail: i + 1 });
         fire(hit, 'pointerup', up);
         fire(hit, 'mouseup', up);
         self._hoverSet.forEach(function (e) { e.classList.remove('ot-active'); });
-        self._cursor.classList.remove('ot-pressed');
+        releaseVisual();
         fire(hit, 'click', up); // synthetic click runs activation behaviour (links, checkboxes, submit)
         if (i === 1) fire(hit, 'dblclick', mouseInit(x, y, { detail: 2 }));
       });
     }
-    var p = once(0);
-    if (count === 2) p = p.then(function () { return sleep(rand(60, 90) / sp); }).then(function () { return once(1); });
-    return p.then(function () { return sleep(rand(90, 160) / sp); });
+    return auto.then(function () {
+      var p = once(0);
+      if (count === 2) p = p.then(function () { return sleep(rand(60, 90) / sp); }).then(function () { return once(1); });
+      return p.then(function () { return sleep(rand(90, 160) / sp); });
+    });
   };
 
-  /** Move to and click an element. o: { double, position: {x, y}, speed, timeout } */
+  /** Move to and click an element. o: { double, position: {x, y}, force, timeout, settle } */
   P.click = function (target, o) {
-    return this._step('click', arguments, function () {
+    o = assign({ actionable: true, verb: 'click' }, o);
+    return this._step(o.double ? 'doubleClick' : 'click', arguments, function () {
       var self = this;
       return this._approach(target, o).then(function (el) {
-        return sleep(rand(80, 160) / self.opts.speed).then(function () { return self._clickAt(el, o); });
+        return sleep(rand(80, 160) / self.opts.speed)
+          .then(function () { return self._clickAt(el, o); })
+          .then(function () { return self._settle(o); });
       });
     });
   };
@@ -761,13 +1518,15 @@
   /** Make sure a checkbox / radio / switch is in the given state (default checked). */
   P.check = function (target, state, o) {
     if (state == null) state = true;
+    if (typeof state === 'object') { o = state; state = true; }
+    o = assign({ actionable: true, verb: 'check' }, o);
     return this._step('check', arguments, function () {
       var self = this;
-      return this._resolve(target).then(function (el) {
+      return this._resolve(target, o.timeout).then(function (el) {
         var input = el.matches('input') ? el : (el.control || el.querySelector('input[type=checkbox],input[type=radio]'));
         var current = input ? input.checked : el.getAttribute('aria-checked') === 'true';
-        if (current === state) return self._approach(el, o);
-        return self._approach(el, o).then(function () { return self._clickAt(el, o); });
+        if (current === state) return self._approach(el, assign({}, o, { actionable: false }));
+        return self._approach(el, o).then(function () { return self._clickAt(el, o); }).then(function () { return self._settle(o); });
       });
     });
   };
@@ -789,8 +1548,9 @@
   });
 
   function nativeSetter(el, prop) {
-    var proto = el instanceof HTMLTextAreaElement ? HTMLTextAreaElement.prototype :
-      el instanceof HTMLSelectElement ? HTMLSelectElement.prototype : HTMLInputElement.prototype;
+    var w = winOf(el);                                          // iframes have their own prototypes
+    var proto = el instanceof w.HTMLTextAreaElement ? w.HTMLTextAreaElement.prototype :
+      el instanceof w.HTMLSelectElement ? w.HTMLSelectElement.prototype : w.HTMLInputElement.prototype;
     var d = Object.getOwnPropertyDescriptor(proto, prop);
     return function (v) { if (d && d.set) d.set.call(el, v); else el[prop] = v; };
   }
@@ -809,7 +1569,7 @@
 
   P._insertText = function (el, text, inputType) {
     if (el.isContentEditable) {
-      document.execCommand(inputType === 'deleteContentBackward' ? 'delete' : 'insertText', false, text);
+      el.ownerDocument.execCommand(inputType === 'deleteContentBackward' ? 'delete' : 'insertText', false, text);
       return;
     }
     var v = el.value, s = el.selectionStart, e = el.selectionEnd;
@@ -819,23 +1579,29 @@
       if (s === e) s = Math.max(0, s - 1);
       nv = v.slice(0, s) + v.slice(e); caret = s;
     } else { nv = v.slice(0, s) + text + v.slice(e); caret = s + text.length; }
-    el.dispatchEvent(new InputEvent('beforeinput', { bubbles: true, cancelable: true, inputType: inputType, data: text || null }));
+    var IE = winOf(el).InputEvent;
+    el.dispatchEvent(new IE('beforeinput', { bubbles: true, cancelable: true, inputType: inputType, data: text || null }));
     nativeSetter(el, 'value')(nv); // works with React/Vue controlled inputs
     try { el.setSelectionRange(caret, caret); } catch (err) { /* not supported */ }
-    el.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: inputType, data: text || null }));
+    el.dispatchEvent(new IE('input', { bubbles: true, inputType: inputType, data: text || null }));
   };
 
   P._key = function (el, key, char) {
     this._sound('key');
-    var ok = el.dispatchEvent(new KeyboardEvent('keydown', keyInit(key)));
+    report('key', { key: key });
+    if (this._real()) {                                       // trusted keystrokes from the recorder
+      return char != null && key.length === 1 ? this._input({ type: 'type', text: char }) : this._input({ type: 'press', key: key });
+    }
+    var KE = winOf(el).KeyboardEvent;
+    var ok = el.dispatchEvent(new KE('keydown', keyInit(key)));
     if (ok && char != null) {
-      el.dispatchEvent(new KeyboardEvent('keypress', keyInit(key)));
+      el.dispatchEvent(new KE('keypress', keyInit(key)));
       this._insertText(el, char, 'insertText');
     } else if (ok && key === 'Backspace') {
       this._insertText(el, '', 'deleteContentBackward');
     }
-    el.dispatchEvent(new KeyboardEvent('keyup', keyInit(key)));
-    return ok;
+    el.dispatchEvent(new KE('keyup', keyInit(key)));
+    return Promise.resolve(ok);
   };
 
   P._typeInto = function (el, text, o) {
@@ -856,25 +1622,30 @@
       var p = Promise.resolve();
       if (typos && /[a-z]/i.test(ch) && Math.random() < typos) {
         var wrong = typoFor(ch);
-        p = p.then(function () { self._key(el, wrong, wrong); return sleep(delay(wrong) + rand(120, 260) / self.opts.speed); })
-             .then(function () { self._key(el, 'Backspace'); return sleep(delay(ch)); });
+        p = p.then(function () { return self._key(el, wrong, wrong); })
+             .then(function () { return sleep(delay(wrong) + rand(120, 260) / self.opts.speed); })
+             .then(function () { return self._key(el, 'Backspace'); })
+             .then(function () { return sleep(delay(ch)); });
       }
       return p.then(function () {
         if (ch === '\n') {
-          if (el.tagName === 'TEXTAREA' || el.isContentEditable) self._key(el, 'Enter', '\n');
-          else self._pressKey(el, 'Enter');
-        } else self._key(el, ch, ch);
-        return sleep(delay(ch));
-      }).then(step);
+          if (self._real()) return self._key(el, 'Enter');
+          if (el.tagName === 'TEXTAREA' || el.isContentEditable) return self._key(el, 'Enter', '\n');
+          return self._pressKey(el, 'Enter');
+        }
+        return self._key(el, ch, ch);
+      }).then(function () { return sleep(delay(ch)); }).then(step);
     }
     return step().then(function () {
-      if (!el.isContentEditable) el.dispatchEvent(new Event('change', { bubbles: true }));
+      if (!el.isContentEditable && !self._real()) el.dispatchEvent(new (winOf(el).Event)('change', { bubbles: true }));
     });
   };
 
   P._pressKey = function (el, key) {
+    if (this._real()) return this._input({ type: 'press', key: key });
     el = el || document.activeElement || document.body;
-    var ok = el.dispatchEvent(new KeyboardEvent('keydown', keyInit(key)));
+    var KE = winOf(el).KeyboardEvent;
+    var ok = el.dispatchEvent(new KE('keydown', keyInit(key)));
     if (ok && key === 'Enter' && el.form && el.tagName === 'INPUT') {
       if (el.form.requestSubmit) el.form.requestSubmit(); else el.form.submit();
     } else if (ok && key === 'Tab') {
@@ -887,47 +1658,65 @@
     } else if (ok && key === 'Backspace' && (el.value != null || el.isContentEditable)) {
       this._insertText(el, '', 'deleteContentBackward');
     }
-    el.dispatchEvent(new KeyboardEvent('keyup', keyInit(key)));
+    el.dispatchEvent(new KE('keyup', keyInit(key)));
+    return Promise.resolve();
   };
+
+  /** Empty a focused field: select-all + delete (real keys when available). */
+  P._clearField = function (f) {
+    if (this._real()) {
+      var self = this;
+      return this._input({ type: 'press', key: 'ControlOrMeta+A' }).then(function () { return self._input({ type: 'press', key: 'Backspace' }); });
+    }
+    if (f.select) f.select();
+    this._insertText(f, '', 'deleteContentBackward');
+    return Promise.resolve();
+  };
+
+  /** The element that actually takes the typing: the field itself, or the text field inside a wrapper. */
+  function typingTarget(el) {
+    if (el.matches(FOCUSABLE)) return el;
+    return el.querySelector(TEXTY) || (el.shadowRoot && el.shadowRoot.querySelector(TEXTY)) || el;
+  }
 
   /**
    * Click into a field and type text like a person.
    * o: { clear: true, delay, typos, click: true, enter: false }
    */
   P.type = function (target, text, o) {
-    o = o || {};
+    o = assign({ actionable: o == null || o.click !== false, verb: 'type into' }, o);
     return this._step('type', arguments, function () {
       var self = this;
       return this._approach(target, o).then(function (el) {
         var ready = o.click === false ? Promise.resolve() : self._clickAt(el, o);
         return ready.then(function () {
-          var f = el.matches(FOCUSABLE) ? el : el.querySelector(TEXTY) || el;
-          if (document.activeElement !== f) f.focus({ preventScroll: true });
+          var f = typingTarget(el);
+          if (f.ownerDocument.activeElement !== f && !(f.getRootNode().activeElement === f)) f.focus({ preventScroll: true });
           if (o.clear !== false && !f.isContentEditable && f.value) {
-            f.select && f.select();
-            self._insertText(f, '', 'deleteContentBackward');
-            return sleep(120 / self.opts.speed).then(function () { return f; });
+            return self._clearField(f).then(function () { return sleep(120 / self.opts.speed); }).then(function () { return f; });
           }
           return f;
         }).then(function (f) {
           return self._typeInto(f, text, o).then(function () {
-            if (o.enter) { self._pressKey(f, 'Enter'); return sleep(150 / self.opts.speed); }
-          });
+            if (o.enter) return Promise.resolve(self._pressKey(f, 'Enter')).then(function () { return sleep(150 / self.opts.speed); });
+          }).then(function () { return self._settle(o); });
         });
       });
     });
   };
 
   /** Clear a text field (visible select-all + delete). */
-  P.clear = function (target) {
+  P.clear = function (target, o) {
+    o = assign({ actionable: true, verb: 'clear' }, o);
     return this._step('clear', arguments, function () {
       var self = this;
-      return this._approach(target).then(function (el) {
-        return self._clickAt(el).then(function () {
-          el.select && el.select();
-          self._insertText(el, '', 'deleteContentBackward');
-          el.dispatchEvent(new Event('change', { bubbles: true }));
-        });
+      return this._approach(target, o).then(function (el) {
+        return self._clickAt(el, o).then(function () {
+          var f = typingTarget(el);
+          return self._clearField(f).then(function () {
+            if (!self._real()) f.dispatchEvent(new (winOf(f).Event)('change', { bubbles: true }));
+          });
+        }).then(function () { return self._settle(o); });
       });
     });
   };
@@ -937,20 +1726,22 @@
     return this._step('press', arguments, function () {
       var self = this, times = (o && o.times) || 1, i = 0;
       return (function again() {
-        if (i++ >= times) return Promise.resolve();
+        if (i++ >= times) return self._settle(o);
         self._sound('key');
-        self._pressKey(document.activeElement, key);
-        return sleep(rand(90, 150) / self.opts.speed).then(again);
+        report('key', { key: key });
+        return Promise.resolve(self._pressKey(deepActive(), key)).then(function () { return sleep(rand(90, 150) / self.opts.speed); }).then(again);
       })();
     });
   };
 
   /** Choose an option of a native <select> by value or visible text. */
   P.select = function (target, valueOrText, o) {
+    o = assign({ actionable: true, verb: 'select from' }, o);
     return this._step('select', arguments, function () {
       var self = this;
+      // A synthetic (visual) click: a real click would open the OS dropdown, which isn't part of the page.
       return this._approach(target, o).then(function (el) {
-        return self._clickAt(el, o).then(function () { return sleep(rand(350, 550) / self.opts.speed); }).then(function () {
+        return self._clickAt(el, assign({}, o, { real: false })).then(function () { return sleep(rand(350, 550) / self.opts.speed); }).then(function () {
           if (el.tagName !== 'SELECT') throw new Error('OneTake.select: target is not a <select>; use click() for custom dropdowns');
           var want = norm(valueOrText), opt = null;
           for (var i = 0; i < el.options.length; i++) {
@@ -959,11 +1750,158 @@
           }
           if (!opt) throw new Error('OneTake.select: no option "' + valueOrText + '"');
           nativeSetter(el, 'value')(opt.value);
-          el.dispatchEvent(new Event('input', { bubbles: true }));
-          el.dispatchEvent(new Event('change', { bubbles: true }));
+          var E = winOf(el).Event;
+          el.dispatchEvent(new E('input', { bubbles: true }));
+          el.dispatchEvent(new E('change', { bubbles: true }));
           el.blur();
-        });
+        }).then(function () { return self._settle(o); });
       });
+    });
+  };
+
+  /** The focused element, looking inside shadow roots and same-origin iframes. */
+  function deepActive() {
+    var a = document.activeElement;
+    for (var i = 0; i < 8 && a; i++) {
+      if (a.shadowRoot && a.shadowRoot.activeElement) { a = a.shadowRoot.activeElement; continue; }
+      if (a.tagName === 'IFRAME') { try { if (a.contentDocument && a.contentDocument.activeElement) { a = a.contentDocument.activeElement; continue; } } catch (e) { /* cross-origin */ } }
+      break;
+    }
+    return a || document.body;
+  }
+
+  /* ---- src/75-drag-upload.js ---- */
+  /* ==================================================================
+   * Drag and upload.
+   *   take.drag('#card-3', '#done-column')          pointer drag; HTML5 drag-and-drop too
+   *   take.upload('text=Attach file', 'invoice.pdf')  file inputs, their buttons/labels, or drop zones
+   * With the recorder, drags use the real mouse and files are read from disk (paths are
+   * relative to the tour script). On live pages files can be URLs or { name, content, type }.
+   * ================================================================== */
+
+  P.drag = function (source, target, o) {
+    o = assign({ actionable: true, verb: 'drag' }, o);
+    return this._step('drag', arguments, function () {
+      var self = this, sp = this.opts.speed, src;
+      return this._approach(source, o).then(function (el) {
+        src = el;
+        return self._resolve(target, o.timeout);
+      }).then(function (dst) {
+        var to = self._pointIn(dst, o.to ? { position: o.to } : {});   // to: { x: 0..1, y: 0..1 } inside the target
+        self._cursor.classList.add('ot-pressed');
+        var run = self._real() ? realDrag(self, to, sp) : synthDrag(self, src, to, sp);
+        return run.then(function () { self._cursor.classList.remove('ot-pressed'); });
+      }).then(function () { return self._settle(o); });
+    });
+  };
+
+  function realDrag(self, to, sp) {
+    var v = self._toVisual(self.pos.x, self.pos.y);
+    return self._input({ type: 'down', x: v.x, y: v.y })
+      .then(function () { return sleep(160 / sp); })
+      .then(function () { return self._moveToPoint(to.x, to.y, { overshoot: false, speed: 0.75 }); })
+      .then(function () { return sleep(120 / sp); })
+      .then(function () { var t = self._toVisual(to.x, to.y); return self._input({ type: 'up', x: t.x, y: t.y }); });
+  }
+
+  function dragEvent(el, type, dt, x, y) {
+    var w = winOf(el), off = frameOffset(el);
+    var Ctor = w.DragEvent || w.MouseEvent;
+    var ev = new Ctor(type, { bubbles: true, cancelable: true, composed: true, clientX: x - off.x, clientY: y - off.y, dataTransfer: dt });
+    if (!ev.dataTransfer && dt) Object.defineProperty(ev, 'dataTransfer', { value: dt });
+    return el.dispatchEvent(ev);
+  }
+
+  /** Synthetic drag: pointer/mouse events with the button held, plus HTML5 drag events for draggable sources. */
+  function synthDrag(self, src, to, sp) {
+    var v0 = self._toVisual(self.pos.x, self.pos.y);
+    var html5 = src.draggable === true || src.getAttribute('draggable') === 'true';
+    var dt = html5 ? new (winOf(src).DataTransfer)() : null;
+    var over = null, moving = true;
+    fire(src, 'pointerdown', mouseInit(v0.x, v0.y, { buttons: 1 }));
+    fire(src, 'mousedown', mouseInit(v0.x, v0.y, { buttons: 1 }));
+    if (html5) dragEvent(src, 'dragstart', dt, v0.x, v0.y);
+    self._dragHeld = true;
+    (function frame() {
+      if (!moving) return;
+      var v = self._toVisual(self.pos.x, self.pos.y), el = hitTest(v.x, v.y);
+      if (el) {
+        if (html5) {
+          if (el !== over) { if (over) dragEvent(over, 'dragleave', dt, v.x, v.y); dragEvent(el, 'dragenter', dt, v.x, v.y); over = el; }
+          dragEvent(el, 'dragover', dt, v.x, v.y);
+        }
+      }
+      requestAnimationFrame(frame);
+    })();
+    return sleep(160 / sp)
+      .then(function () { return self._moveToPoint(to.x, to.y, { overshoot: false, speed: 0.75 }); })
+      .then(function () { return sleep(120 / sp); })
+      .then(function () {
+        moving = false;
+        self._dragHeld = false;
+        var v = self._toVisual(to.x, to.y), el = hitTest(v.x, v.y) || over;
+        if (html5) {
+          if (el) { dragEvent(el, 'dragover', dt, v.x, v.y); dragEvent(el, 'drop', dt, v.x, v.y); }
+          dragEvent(src, 'dragend', dt, v.x, v.y);
+        }
+        if (el) { fire(el, 'pointerup', mouseInit(v.x, v.y)); fire(el, 'mouseup', mouseInit(v.x, v.y)); }
+      });
+  }
+
+  /** The file input an element stands for: itself, its label's control, or one nearby. */
+  function fileInputFor(el) {
+    if (el.matches('input[type=file]')) return el;
+    if (el.control && el.control.type === 'file') return el.control;
+    var n = el;
+    for (var i = 0; i < 5 && n; i++, n = n.parentElement) {
+      var inp = n.querySelector && n.querySelector('input[type=file]');
+      if (inp) return inp;
+    }
+    return null;
+  }
+
+  function loadFile(self, spec) {
+    if (spec && typeof spec === 'object' && !(spec instanceof Blob)) {
+      return Promise.resolve(new File([spec.content == null ? '' : spec.content], spec.name || 'file.txt', { type: spec.type || 'text/plain' }));
+    }
+    if (typeof window.__otInput === 'function') {
+      return self._input({ type: 'file', path: String(spec) }).then(function (f) {
+        var bin = atob(f.base64), bytes = new Uint8Array(bin.length);
+        for (var i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+        return new File([bytes], f.name, { type: f.type });
+      });
+    }
+    return fetch(String(spec)).then(function (r) {
+      if (!r.ok) throw new Error('could not fetch ' + spec + ' (' + r.status + ')');
+      return r.blob();
+    }).then(function (b) { return new File([b], String(spec).split('/').pop().split('?')[0] || 'file', { type: b.type }); });
+  }
+
+  P.upload = function (target, files, o) {
+    files = [].concat(files);
+    o = assign({ actionable: true, verb: 'upload to' }, o);
+    return this._step('upload', arguments, function () {
+      var self = this;
+      return this._approach(target, o).then(function (el) {
+        var input = fileInputFor(el);
+        return self._clickAt(el, assign({}, o, { visualOnly: true }))      // no OS file dialog
+          .then(function () { return Promise.all(files.map(function (f) { return loadFile(self, f); })); })
+          .then(function (list) {
+            var dt = new (winOf(el).DataTransfer)();
+            list.forEach(function (f) { dt.items.add(f); });
+            if (input && !o.drop) {
+              input.files = dt.files;
+              var E = winOf(input).Event;
+              input.dispatchEvent(new E('input', { bubbles: true }));
+              input.dispatchEvent(new E('change', { bubbles: true }));
+            } else {                                                        // a drop zone
+              var v = self._toVisual(self.pos.x, self.pos.y);
+              dragEvent(el, 'dragenter', dt, v.x, v.y);
+              dragEvent(el, 'dragover', dt, v.x, v.y);
+              dragEvent(el, 'drop', dt, v.x, v.y);
+            }
+          });
+      }).then(function () { return self._settle(o); });
     });
   };
 
@@ -1131,7 +2069,7 @@
     var sp = this.opts.speed;
     return this._resolve(target, o.timeout).then(function (el) {
       return self._ensureInView(el).then(function () {
-        var r = el.getBoundingClientRect(), rnd = seeded(Math.floor(Math.random() * 1e9));
+        var r = rectOf(el), rnd = seeded(Math.floor(Math.random() * 1e9));
         var h = { el: el, nodes: [], w: r.width, h: r.height, pad: o.padding, shape: o.shape };
         var drawMs = o.drawDuration / sp;
         var drawn = shape(self, h, r, o, rnd, drawMs);
@@ -1162,7 +2100,7 @@
   P._updateHighlights = function () {
     this._highlights.forEach(function (h) {
       if (!h.el.isConnected) return;
-      var r = h.el.getBoundingClientRect(), pad = h.pad;
+      var r = rectOf(h.el), pad = h.pad;
       if (h.group) h.group.setAttribute('transform', 'translate(' + r.left + ' ' + r.top + ')' +
         (h.w > 0 && Math.abs(r.width / h.w - 1) > 0.001 ? ' scale(' + (r.width / h.w) + ')' : ''));
       if (h.box) {
@@ -1280,17 +2218,45 @@
     stop: function () { this._setCaption(null); }
   });
 
+  /*
+   * The recorder tells the page which part of it is on screen (camera zoom, --aspect crop),
+   * so captions stay inside the picture at a constant on-screen size:
+   *   OneTake.view({ x, y, width, height })   viewport CSS px, or null for the whole page
+   */
+  var VIEW = null;
+  function placeCaption(c) {
+    if (!c) return;
+    var st = c.style;
+    if (!VIEW) { st.left = st.bottom = st.top = st.maxWidth = st.fontSize = st.padding = st.borderRadius = ''; return; }
+    var vw = window.innerWidth, vh = window.innerHeight;
+    var k = Math.max(VIEW.width / vw, VIEW.height / vh);
+    st.left = (VIEW.x + VIEW.width / 2) + 'px';
+    if (c.classList.contains('ot-top')) { st.bottom = 'auto'; st.top = (VIEW.y + VIEW.height * 0.06) + 'px'; }
+    else { st.top = 'auto'; st.bottom = (vh - VIEW.y - VIEW.height + VIEW.height * 0.07) + 'px'; }
+    st.maxWidth = (VIEW.width * 0.9) + 'px';
+    st.fontSize = (20 * k) + 'px';
+    st.padding = (12 * k) + 'px ' + (22 * k) + 'px';
+    st.borderRadius = (12 * k) + 'px';
+  }
+  OneTake.view = function (v) {
+    VIEW = v && v.width ? v : null;
+    var all = document.querySelectorAll('.ot-caption');
+    for (var i = 0; i < all.length; i++) placeCaption(all[i]);
+  };
+
   P._setCaption = function (text, o) {
     if (!this._mounted) return;
     var c = this._part('_caption', 'div', 'ot-caption');
     clearTimeout(this._captionTimer);
-    if (text == null) { c.classList.remove('ot-in'); return; }
+    if (text == null) { if (c.classList.contains('ot-in')) report('captionHide', {}); c.classList.remove('ot-in'); return; }
+    report('caption', { text: String(text), duration: o && o.duration ? o.duration / this.opts.speed : null });
     var self = this;
     var show = function () {
       c.textContent = text;
       c.classList.toggle('ot-top', !!(o && o.position === 'top'));
+      placeCaption(c);
       c.classList.add('ot-in');
-      if (o && o.duration) self._captionTimer = setTimeout(function () { c.classList.remove('ot-in'); }, o.duration / self.opts.speed);
+      if (o && o.duration) self._captionTimer = setTimeout(function () { c.classList.remove('ot-in'); report('captionHide', {}); }, o.duration / self.opts.speed);
     };
     if (c.classList.contains('ot-in')) { c.classList.remove('ot-in'); this._captionTimer = setTimeout(show, 280); }
     else show();
@@ -1300,7 +2266,7 @@
   P.caption = function (text, o) {
     return this._step('caption', arguments, function () {
       this._setCaption(text, o);
-      return sleep(((o && o.wait) || 350) / this.opts.speed);
+      return sleep((o && o.wait != null ? o.wait : 350) / this.opts.speed);
     });
   };
   P.hideCaption = function () {
@@ -1324,7 +2290,8 @@
   feature({
     defaults: {
       zoomScale: 2,             // default max zoom for zoom()
-      zoomSmoothness: 6.5       // camera spring stiffness (higher = snappier)
+      zoomSmoothness: 6.5,      // camera spring stiffness (higher = snappier)
+      autoZoom: false           // true or { scale: 1.6, hold: 2200 }: zoom toward every click automatically
     },
     stop: function () { this._camReset(); },
     destroy: function () { this._camReset(); }
@@ -1359,7 +2326,7 @@
     return { x: c.cx + (x - innerWidth / 2) / s, y: c.cy + (y - innerHeight / 2) / s };
   };
   P._layoutRect = function (el) {
-    var r = el.getBoundingClientRect(), a = this._toLayout(r.left, r.top), b = this._toLayout(r.right, r.bottom);
+    var r = rectOf(el), a = this._toLayout(r.left, r.top), b = this._toLayout(r.right, r.bottom);
     return { left: a.x, top: a.y, right: b.x, bottom: b.y, width: b.x - a.x, height: b.y - a.y };
   };
 
@@ -1368,6 +2335,9 @@
     var c = this._camGet(), W = innerWidth, H = innerHeight;
     o = o || {};
     clearTimeout(c.timer);
+    if (!o.auto) clearTimeout(c.autoTimer);
+    c.auto = !!(el && o.auto);
+    c.manual = !!(el && !o.auto);
     if (!el) {
       c.el = null; c.tls = 0; c.tx = W / 2; c.ty = H / 2;
     } else {
@@ -1468,6 +2438,20 @@
     this._camApply(true);
   };
 
+  /** Auto-zoom (opts.autoZoom): ease toward the click point, hold, then ease back out. Skipped while zoom() is active. */
+  P._autoZoomTo = function (pos) {
+    var az = this.opts.autoZoom;
+    if (!az || !pos) return Promise.resolve();
+    var c = this._camGet();
+    if (c.manual) return Promise.resolve();
+    var cfg = az === true ? {} : az, self = this;
+    var already = c.auto && c.tls > 0;
+    this._camSet({ x: pos.x, y: pos.y }, { scale: cfg.scale || 1.6, auto: true, follow: true });
+    clearTimeout(c.autoTimer);
+    c.autoTimer = setTimeout(function () { if (c.auto) self._camSet(null); }, (cfg.hold != null ? cfg.hold : 2200) / this.opts.speed);
+    return already ? Promise.resolve() : sleep(420 / this.opts.speed);
+  };
+
   P._camSettle = function (maxMs) {
     var self = this, t0 = performance.now();
     return new Promise(function (resolve) {
@@ -1523,6 +2507,7 @@
     });
   };
 
-  OneTake.version = '1.0.0';
+  OneTake.version = '2.0.0';
   return OneTake;
 });
+//# sourceURL=onetake.js

@@ -1,16 +1,30 @@
 # OneTake
 
-> Script product demo videos for web apps: a human-like cursor drives the real UI, a smooth camera zooms on what matters, hand-drawn highlights and captions guide the viewer, and a frame-by-frame recorder renders a 60 fps MP4.
+> Script product demo videos for web apps: a human-like cursor drives the real UI with trusted input, a smooth camera zooms on what matters, hand-drawn highlights and captions guide the viewer, and a frame-by-frame recorder renders a 60 fps MP4 (window frame, intro/outro cards, sound, subtitles, chapters, thumbnail, GIF/WebM, vertical crops). One tour script spans page loads; every take is identical.
 
 ## For AI agents
 
-- [AGENTS.md](AGENTS.md): the full workflow for making a demo video of a project (pick a scenario from its browser tests, sign in, map the DOM, write one script per page, rehearse, render), API cheat sheet, recorder flags and gotchas.
+- [AGENTS.md](AGENTS.md): the workflow for making a demo video of a project (pick a scenario from its browser tests, sign in with a saved session, map the DOM, write the tour, `onetake check`, `onetake record`, look at frames), API and recorder cheat sheets, gotchas.
 - [skills/onetake-demo-video/SKILL.md](skills/onetake-demo-video/SKILL.md): the same workflow as a Claude skill.
-- [templates/demo-kit/](templates/demo-kit/): starter kit to copy next to a project (record.sh + page script).
+- [templates/demo-kit/](templates/demo-kit/): starter kit to copy next to a project (onetake.config.js, tour.js, steps.js, record.sh).
+- [docs/ai-agents.md](docs/ai-agents.md): how people ask an agent for a video.
 
-## Reference
+## Docs
 
-- [README.md](README.md): features, API, options, recorder and limitations.
-- [dist/onetake.js](dist/onetake.js): the bundled library (UMD, no dependencies).
-- [tools/record.js](tools/record.js): the recorder CLI. [tools/save-login.js](tools/save-login.js): save a signed-in session.
-- [examples/tour.js](examples/tour.js): a complete tour using every feature, for [examples/demo.html](examples/demo.html).
+- [docs/getting-started.md](docs/getting-started.md): install, first video.
+- [docs/writing-tours.md](docs/writing-tours.md): how tours run, multi-page tours, storytelling, reusable steps (OneTake.define, includes).
+- [docs/targets.md](docs/targets.md): text=, text*=, label=, role=, CSS, `>>` chaining, nth=, shadow DOM, iframes, strict matching.
+- [docs/waiting-and-assertions.md](docs/waiting-and-assertions.md): actionability, settling, expect(), expectUrl(), scrollUntil().
+- [docs/api.md](docs/api.md): every step and option.
+- [docs/camera-and-highlights.md](docs/camera-and-highlights.md): zoom, autoZoom, highlight shapes, captions, cursor.
+- [docs/recording.md](docs/recording.md): the onetake CLI (init, check, record, login, --watch), onetake.config.js, all flags, frame-by-frame vs realtime, logins.
+- [docs/output.md](docs/output.md): frame and backgrounds, intro/outro, sound and music, subtitles, chapters, thumbnails, formats, --aspect.
+- [docs/recipes.md](docs/recipes.md): custom dropdowns, comboboxes, date pickers, modals, uploads, drag and drop, tables, rich text, shortcuts, demo data, --now, languages, CI.
+- [docs/troubleshooting.md](docs/troubleshooting.md): every error message and fix.
+- [docs/migrating-from-v1.md](docs/migrating-from-v1.md), [docs/architecture.md](docs/architecture.md), [docs/contributing.md](docs/contributing.md).
+
+## Code
+
+- [dist/onetake.js](dist/onetake.js): the bundled library (UMD, no dependencies). [types/onetake.d.ts](types/onetake.d.ts): TypeScript types.
+- [tools/cli.js](tools/cli.js): the `onetake` command. [tools/lib/](tools/lib/): session (multi-page, trusted input), frames, realtime, render, audio, config.
+- [examples/tour.js](examples/tour.js): a complete tour for [examples/demo.html](examples/demo.html).

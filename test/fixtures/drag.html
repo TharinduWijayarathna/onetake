@@ -1,0 +1,31 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Drag</title><link rel="stylesheet" href="style.css">
+<style>.cols{display:flex;gap:16px}.col{flex:1;min-height:180px;padding:12px;background:#f1f5f9;border-radius:12px}.col h3{margin:0 0 8px;font-size:14px}
+.card{padding:10px 12px;margin-bottom:8px;background:#fff;border:1px solid #e2e8f0;border-radius:8px;cursor:grab}
+.track{position:relative;height:8px;margin:34px 0 10px;background:#e2e8f0;border-radius:4px}.knob{position:absolute;top:-8px;left:0;width:24px;height:24px;margin-left:-12px;border-radius:50%;background:#4f46e5;cursor:grab;touch-action:none}</style></head>
+<body><main>
+  <h1>Board (drag)</h1>
+  <div class="cols">
+    <div class="col" id="todo"><h3>To do</h3><div class="card" draggable="true" id="c1">Write release notes</div><div class="card" draggable="true" id="c2">Record the demo</div></div>
+    <div class="col" id="done"><h3>Done</h3></div>
+  </div>
+  <div class="track" id="track"><div class="knob" id="knob"></div></div>
+  <p>Volume: <strong id="vol">0</strong></p>
+</main>
+<script>
+  var dragged = null;
+  document.querySelectorAll('.card').forEach(function (c) { c.addEventListener('dragstart', function (e) { dragged = c; e.dataTransfer.setData('text/plain', c.id); }); });
+  document.querySelectorAll('.col').forEach(function (col) {
+    col.addEventListener('dragover', function (e) { e.preventDefault(); });
+    col.addEventListener('drop', function (e) { e.preventDefault(); var id = e.dataTransfer.getData('text/plain'); var c = document.getElementById(id) || dragged; if (c) col.appendChild(c); });
+  });
+  // a pointer-events slider
+  var track = document.getElementById('track'), knob = document.getElementById('knob'), on = false;
+  function set(x) { var r = track.getBoundingClientRect(); var p = Math.max(0, Math.min(1, (x - r.left) / r.width)); knob.style.left = (p * 100) + '%'; document.getElementById('vol').textContent = Math.round(p * 100); }
+  knob.addEventListener('pointerdown', function (e) { on = true; knob.setPointerCapture && knob.setPointerCapture(e.pointerId); });
+  window.addEventListener('pointermove', function (e) { if (on) set(e.clientX); });
+  window.addEventListener('pointerup', function () { on = false; });
+  window.__verify = function () {
+    var inDone = document.getElementById('done').contains(document.getElementById('c2')), v = +document.getElementById('vol').textContent;
+    return { ok: inDone && v >= 70 && v <= 80, detail: 'moved=' + inDone + ' volume=' + v };
+  };
+</script></body></html>

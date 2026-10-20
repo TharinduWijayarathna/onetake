@@ -33,11 +33,21 @@
       clientX: x, clientY: y, screenX: x + (window.screenX || 0), screenY: y + (window.screenY || 0),
       button: 0, buttons: 0, pointerId: 1, pointerType: 'mouse', isPrimary: true }, extra);
   }
+  /** Dispatch a synthetic pointer/mouse event; coordinates are converted for elements inside iframes. */
   function fire(el, type, init) {
     if (!el) return true;
-    var Ctor = /^pointer/.test(type) && window.PointerEvent ? PointerEvent : MouseEvent;
+    var w = winOf(el);
+    if (el.ownerDocument !== document) {
+      var off = frameOffset(el);
+      init = assign({}, init, { view: w, clientX: init.clientX - off.x, clientY: init.clientY - off.y });
+    }
+    var Ctor = /^pointer/.test(type) && w.PointerEvent ? w.PointerEvent : w.MouseEvent;
     return el.dispatchEvent(new Ctor(type, init));
   }
+
+  /** True when the recorder drives the real mouse and keyboard (trusted input). */
+  P._real = function () { return this.opts.realInput !== false && typeof window.__otInput === 'function'; };
+  P._input = function (msg) { return window.__otInput(msg); };
 
   feature({
     defaults: {
@@ -69,8 +79,13 @@
   P._hoverAt = function (lx, ly, move) {
     var hit = this._hit(lx, ly);
     var vis = this._toVisual(lx, ly), x = vis.x, y = vis.y; // events carry on-screen coordinates
+    if (this._real()) {                                     // the real mouse hovers natively
+      if (move) this._input({ type: 'move', x: x, y: y });
+      if (hit !== this._hoverSet[0]) { this._hoverSet = hit ? [hit] : []; this._setKind(this._kindFor(hit)); }
+      return hit;
+    }
     var chain = [];
-    for (var n = hit; n && n.nodeType === 1; n = n.parentElement) chain.push(n);
+    for (var n = hit; n && n.nodeType === 1; n = n.parentElement || (n.parentNode && n.parentNode.host)) chain.push(n);
     var prevTop = this._hoverSet[0];
     if (hit !== prevTop) {
       var init = mouseInit(x, y);
@@ -84,7 +99,7 @@
       this._setHover(chain);
       this._setKind(this._kindFor(hit));
     }
-    if (move && hit) { var mi = mouseInit(x, y); fire(hit, 'pointermove', mi); fire(hit, 'mousemove', mi); }
+    if (move && hit) { var mi = mouseInit(x, y, this._dragHeld ? { buttons: 1 } : null); fire(hit, 'pointermove', mi); fire(hit, 'mousemove', mi); }
     return hit;
   };
 

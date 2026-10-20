@@ -14,7 +14,8 @@
   feature({
     defaults: {
       zoomScale: 2,             // default max zoom for zoom()
-      zoomSmoothness: 6.5       // camera spring stiffness (higher = snappier)
+      zoomSmoothness: 6.5,      // camera spring stiffness (higher = snappier)
+      autoZoom: false           // true or { scale: 1.6, hold: 2200 }: zoom toward every click automatically
     },
     stop: function () { this._camReset(); },
     destroy: function () { this._camReset(); }
@@ -49,7 +50,7 @@
     return { x: c.cx + (x - innerWidth / 2) / s, y: c.cy + (y - innerHeight / 2) / s };
   };
   P._layoutRect = function (el) {
-    var r = el.getBoundingClientRect(), a = this._toLayout(r.left, r.top), b = this._toLayout(r.right, r.bottom);
+    var r = rectOf(el), a = this._toLayout(r.left, r.top), b = this._toLayout(r.right, r.bottom);
     return { left: a.x, top: a.y, right: b.x, bottom: b.y, width: b.x - a.x, height: b.y - a.y };
   };
 
@@ -58,6 +59,9 @@
     var c = this._camGet(), W = innerWidth, H = innerHeight;
     o = o || {};
     clearTimeout(c.timer);
+    if (!o.auto) clearTimeout(c.autoTimer);
+    c.auto = !!(el && o.auto);
+    c.manual = !!(el && !o.auto);
     if (!el) {
       c.el = null; c.tls = 0; c.tx = W / 2; c.ty = H / 2;
     } else {
@@ -156,6 +160,20 @@
     clearTimeout(c.timer);
     c.el = null; c.cx = c.tx = innerWidth / 2; c.cy = c.ty = innerHeight / 2; c.ls = c.tls = 0; c.vx = c.vy = c.vls = 0;
     this._camApply(true);
+  };
+
+  /** Auto-zoom (opts.autoZoom): ease toward the click point, hold, then ease back out. Skipped while zoom() is active. */
+  P._autoZoomTo = function (pos) {
+    var az = this.opts.autoZoom;
+    if (!az || !pos) return Promise.resolve();
+    var c = this._camGet();
+    if (c.manual) return Promise.resolve();
+    var cfg = az === true ? {} : az, self = this;
+    var already = c.auto && c.tls > 0;
+    this._camSet({ x: pos.x, y: pos.y }, { scale: cfg.scale || 1.6, auto: true, follow: true });
+    clearTimeout(c.autoTimer);
+    c.autoTimer = setTimeout(function () { if (c.auto) self._camSet(null); }, (cfg.hold != null ? cfg.hold : 2200) / this.opts.speed);
+    return already ? Promise.resolve() : sleep(420 / this.opts.speed);
   };
 
   P._camSettle = function (maxMs) {

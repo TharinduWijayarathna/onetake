@@ -30,22 +30,6 @@ function readLibrary() {
   return fs.readFileSync(file, 'utf8');
 }
 
-/** Evaluated in the page: start one demo script (does not wait for it to finish). */
-function startScript({ code, speed, startPosition }) {
-  const take = new window.OneTake({ speed, startPosition, sound: false });
-  window.__otTake = take;
-  window.__otDone = false;
-  window.__otError = null;
-  try {
-    // eslint-disable-next-line no-new-func
-    new Function('take', code)(take);
-  } catch (e) {
-    window.__otError = String(e && e.message || e); window.__otDone = true; return;
-  }
-  take.then(() => { window.__otDone = true; },
-            e => { window.__otError = String(e && e.message || e); window.__otDone = true; });
-}
-
 const isNavError = e => /context was destroyed|navigat|Target closed|frame was detached/i.test(e.message);
 
 function attachLogging(page) {
@@ -53,4 +37,4 @@ function attachLogging(page) {
   page.on('console', m => { if (m.type() === 'error') console.error('[console]', m.text()); });
 }
 
-module.exports = { ROOT, fail, loadPlaywright, findFfmpeg, readLibrary, startScript, isNavError, attachLogging };
+module.exports = { ROOT, fail, loadPlaywright, findFfmpeg, readLibrary, isNavError, attachLogging };

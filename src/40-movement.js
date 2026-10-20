@@ -65,7 +65,7 @@
 
   /** Pick a natural point inside an element (not dead-centre), in layout coordinates. */
   P._pointIn = function (el, o) {
-    var r = el.getBoundingClientRect(), p;
+    var r = rectOf(el), p;
     if (o && o.position && typeof o.position === 'object') {
       p = { x: r.left + r.width * o.position.x, y: r.top + r.height * o.position.y };
     } else {

@@ -32,6 +32,7 @@ const footer = `
   OneTake.version = '${pkg.version}';
   return OneTake;
 });
+//# sourceURL=onetake.js
 `;
 
 fs.mkdirSync(path.join(root, 'dist'), { recursive: true });

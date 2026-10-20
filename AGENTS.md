@@ -61,6 +61,12 @@ Open each page of the scenario and record, for every control you'll touch:
 
 ### 4. Write one script per page load
 
+> If a person is available to click through the flow, **OneTake Studio** can write these scripts for you:
+> `node tools/studio.js --url <start page> --out <kit>`. They press ● Record, use the app, mark zooms and
+> highlights, then Generate. You can then polish the generated scripts (captions, timing, function targets
+> for anything fragile, such as date-picker cells recorded as CSS paths).
+
+
 Each script is plain JavaScript with a ready `take` (a `OneTake` instance) in scope. Template:
 `templates/demo-kit/1-page.js`. A good page script:
 
@@ -122,6 +128,13 @@ Every action waits up to `waitTimeout` (8 s) for its target to exist and be visi
 | `set(opts)`, `showCursor()`, `hideCursor()`, `stop()`, `destroy()` | |
 
 Options: `new OneTake({ speed, typingDelay, typos, zoomScale, highlightColor, cursorSize, sound, waitTimeout, onStep, onError })`.
+
+## Studio
+
+`node tools/studio.js --url <url> [--out dir] [--storage auth.json] [--width 1440 --height 900] [--new] [--headless]`
+opens a recording browser with the OneTake toolbar. Steps live in `<out>/studio.json` (resumable); Generate writes
+`NN-<page>.js` + `render.sh`; Render runs the recorder with the studio's login. `startStudio(opts)` is exported for
+automation (see `test/studio.js`). Recorded selectors prefer test ids → `#id` → `label=` → `name` → `text=` → CSS path.
 
 ## Recorder
 

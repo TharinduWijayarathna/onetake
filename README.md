@@ -42,6 +42,7 @@ to a video with `npm run example`.
 | `examples/demo.html` | A sample CRM app with sections, tabs, a modal form, and a scripted tour. |
 | `examples/tour.js` | The same tour as a standalone script for the recorder. |
 | `test/smoke.js` | Plays the example end to end and checks the app was really driven (`npm test`). |
+| `tools/studio.js`, `tools/studio/` | **OneTake Studio**: make a demo by clicking through your app, marking zooms and highlights, then Generate / Render. |
 | `tools/save-login.js` | Saves a signed-in session (Playwright storageState) for recording apps behind a login. |
 | `templates/demo-kit/` | Starter kit to copy next to a project: `record.sh` (one-command render) + a page-script skeleton. |
 | `AGENTS.md`, `skills/`, `llms.txt` | Guides for AI agents: how to make a demo video of any project with OneTake. |
@@ -103,6 +104,25 @@ A script file is plain JS with a ready `take` variable in scope:
 // my-tour.js
 take.caption('Creating an invoice').click('text=New invoice').type('label=Amount', '120');
 ```
+
+### OneTake Studio: record by clicking
+```bash
+npm run studio -- --url http://localhost:3000 --out my-demo
+```
+A browser opens on your app with the OneTake toolbar on top:
+
+| | |
+|---|---|
+| **● Record** | Use your app normally. Clicks, typing, selects, checkboxes and page loads become steps, each with the most stable selector available (test ids → `#id` → `label=` → `name` → `text=` → CSS path). Password fields are never recorded. |
+| **✎ Mark** | Hover an element (↑ / ↓ for parent / child) and click it: **Zoom** (for N seconds, or until *Zoom out*), **Circle**, **Box**, **Underline**, **Arrow**, **Spotlight** or **Pulse**, with an optional label. |
+| **💬 Caption · ⤢ Zoom out · ⏱ Wait** | Add narration, zoom back out, or pause. |
+| **☰ Steps** | The timeline, grouped by page: edit typed values, labels, seconds and selectors; reorder; delete. Hover a step to see its element. |
+| **Generate** | Writes one plain OneTake script per page load (`1-….js`, `2-….js`) plus `render.sh` into `--out`. Edit them by hand or with an AI. |
+| **▶ Render** | Renders `videos/demo.mp4` (frame by frame, 60 fps) in a separate browser that starts signed in as you were. |
+
+The session is saved to `<out>/studio.json` after every change, so you can close the studio and run the same
+command later to carry on (`--new` starts over). Shortcuts: **Alt+R** record/pause, **Alt+M** mark, **Esc** cancel.
+Rendering replays your steps in the app, so it creates the same records again.
 
 ### Apps behind a login
 ```bash

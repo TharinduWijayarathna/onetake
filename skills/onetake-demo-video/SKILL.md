@@ -44,6 +44,10 @@ For every control in the flow, note a stable selector (`#id`, `[name]`, `[data-t
 
 ## 5. Write one script per page load
 
+Shortcut when a person can click through the flow: `node <one-take>/tools/studio.js --url <start> --out <kit>`
+(● Record, ✎ Mark zooms/highlights, Generate). Then polish the generated scripts as below.
+
+
 `take` (a OneTake instance) is in scope. Pattern:
 
 ```js

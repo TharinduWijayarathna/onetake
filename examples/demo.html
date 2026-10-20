@@ -197,6 +197,7 @@
       .box('#save', { label: 'Save when ready', duration: 1400, padding: 6 })
       .click('#save')
       .zoomOut()                                     // 3) zoomOut(): back to the full page right away
+      .expect('#contact-table tbody tr:first-child', { text: 'Priya Raman' })
 
       // 4) zoom on the new row for 3 s and underline it while zoomed
       .zoom('#contact-table tbody tr:first-child', 3, { scale: 1.5 })
@@ -211,6 +212,7 @@
       .zoom('[data-panel="notifications"]')
       .spotlight('[data-panel="notifications"]', { duration: 1800, padding: 8 })
       .check('#n-weekly')
+      .expect('#n-weekly', { checked: true })
       .arrow('#n-weekly', { from: 'left', label: 'Enabled!', duration: 1800, color: '#16a34a' })
       .zoomOut()
 

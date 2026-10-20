@@ -8,6 +8,9 @@
     "dist/",
     "tools/"
   ],
+  "scripts": {
+    "build": "node scripts/build.js"
+  },
   "keywords": [
     "demo",
     "video",

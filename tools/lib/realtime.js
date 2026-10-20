@@ -60,7 +60,7 @@ async function checkTour(browser, cfg, out, log = console.log) {
   attachLogging(page);
   const driver = realtimeDriver(page, cfg, 25);
   const t0 = Date.now();
-  driver.onStep = out.quiet ? null : ev => log(`  ${String(ev.index).padStart(3)}  ${ev.name}${ev.arg ? '(' + JSON.stringify(ev.arg) + ')' : ''}${ev.site ? '  ' + ev.site : ''}`);
+  driver.onStep = out.quiet ? null : ev => log(`  ${String(ev.index + 1).padStart(3)}  ${ev.name}${ev.arg ? '(' + JSON.stringify(ev.arg) + ')' : ''}${ev.site ? '  ' + ev.site : ''}`);
   let result;
   try {
     result = await runSession(page, cfg, driver, log);

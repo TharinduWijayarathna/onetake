@@ -196,7 +196,7 @@ function watchFiles(cfg, run) {
       if (again) { again = false; trigger(); }
     }, 150);
   };
-  files.forEach(f => fs.watch(f, trigger));
+  files.forEach(f => fs.watchFile(f, { interval: 300 }, (cur, prev) => { if (cur.mtimeMs !== prev.mtimeMs) trigger(); }));   // survives editors' atomic saves
   console.log(`\n👀 watching ${files.map(f => path.relative(process.cwd(), f)).join(', ')} (Ctrl+C to stop)`);
 }
 

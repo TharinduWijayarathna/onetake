@@ -227,7 +227,7 @@ async function runSession(page, cfg, driver, log = console.log) {
         if (finished) break;                            // v1 style: the next file runs on the new page
         // A step that already acted (clicked, typed) is not repeated; one cut short before acting is.
         const from = current ? current.index + (current.done || current.acted ? 1 : 0) : 0;
-        log(`  ↻ page loaded, continuing from step ${from}`);
+        log(`  ↻ page loaded, continuing from step ${from + 1}`);
         current = null;
         await start(tour, from);
         continue;

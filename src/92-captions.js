@@ -15,13 +15,14 @@
     if (!this._mounted) return;
     var c = this._part('_caption', 'div', 'ot-caption');
     clearTimeout(this._captionTimer);
-    if (text == null) { c.classList.remove('ot-in'); return; }
+    if (text == null) { if (c.classList.contains('ot-in')) report('captionHide', {}); c.classList.remove('ot-in'); return; }
+    report('caption', { text: String(text), duration: o && o.duration ? o.duration / this.opts.speed : null });
     var self = this;
     var show = function () {
       c.textContent = text;
       c.classList.toggle('ot-top', !!(o && o.position === 'top'));
       c.classList.add('ot-in');
-      if (o && o.duration) self._captionTimer = setTimeout(function () { c.classList.remove('ot-in'); }, o.duration / self.opts.speed);
+      if (o && o.duration) self._captionTimer = setTimeout(function () { c.classList.remove('ot-in'); report('captionHide', {}); }, o.duration / self.opts.speed);
     };
     if (c.classList.contains('ot-in')) { c.classList.remove('ot-in'); this._captionTimer = setTimeout(show, 280); }
     else show();

@@ -56,9 +56,22 @@ function initGlobals(cfg, extra) {
     lines.push(`window.__OT_NOW = ${t};`);
   }
   lines.push('window.__otStatus = ' + pageStatus.toString() + ';');
-  // Without the virtual clock (realtime / check), --now still shifts Date to the given time.
+  // Without the virtual clock (realtime / check): --now still shifts Date, and the seed still fixes Math.random.
   if (cfg.now && !extra) lines.push('(' + shiftDate.toString() + ')();');
+  if (cfg.seed != null && !extra) lines.push('(' + seedRandom.toString() + ')();');
   return lines.join('\n') + '\n' + (extra || '');
+}
+
+/** Evaluated in the page (realtime modes): a fixed Math.random sequence (the clock does this in frames mode). */
+function seedRandom() {
+  var s = (+window.__OT_SEED >>> 0) || 1;
+  Math.random = function () {
+    s = (s + 0x6D2B79F5) >>> 0;
+    var t = s;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
 }
 
 /** Evaluated in the page (realtime modes): Date runs from __OT_NOW, carried across page loads. */

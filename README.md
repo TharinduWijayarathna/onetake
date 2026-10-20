@@ -42,6 +42,9 @@ to a video with `npm run example`.
 | `examples/demo.html` | A sample CRM app with sections, tabs, a modal form, and a scripted tour. |
 | `examples/tour.js` | The same tour as a standalone script for the recorder. |
 | `test/smoke.js` | Plays the example end to end and checks the app was really driven (`npm test`). |
+| `tools/save-login.js` | Saves a signed-in session (Playwright storageState) for recording apps behind a login. |
+| `templates/demo-kit/` | Starter kit to copy next to a project: `record.sh` (one-command render) + a page-script skeleton. |
+| `AGENTS.md`, `skills/`, `llms.txt` | Guides for AI agents: how to make a demo video of any project with OneTake. |
 
 ---
 
@@ -100,6 +103,20 @@ A script file is plain JS with a ready `take` variable in scope:
 // my-tour.js
 take.caption('Creating an invoice').click('text=New invoice').type('label=Amount', '120');
 ```
+
+### Apps behind a login
+```bash
+node tools/save-login.js --url http://localhost/login --until /dashboard --out demo/auth.json   # sign in once
+node tools/record.js --url http://localhost/clients/create --storage demo/auth.json --script 1.js --script 2.js
+```
+For a ready-made setup, copy `templates/demo-kit/` next to your project, edit the CONFIG block of
+`record.sh` and run `bash record.sh`.
+
+### Let an AI make the video
+Point any coding agent at this repo and your project and ask for a demo video. [`AGENTS.md`](AGENTS.md)
+(also loaded as `CLAUDE.md` and summarised in `llms.txt`) walks it through picking a scenario from your
+browser tests, signing in, mapping the DOM, writing the page scripts, rehearsing and rendering.
+For Claude there's a ready skill in [`skills/onetake-demo-video/SKILL.md`](skills/onetake-demo-video/SKILL.md).
 
 ---
 

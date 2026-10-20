@@ -16,6 +16,7 @@
  * Options (set as globals before this script runs):
  *   window.__OT_SEED = 42                  fixed Math.random sequence (identical takes)
  *   window.__OT_NOW = 1793491200000        the app's "now" (e.g. --now 2026-11-01)
+ * Virtual time carries over page loads within the tab, so Date never jumps backwards.
  *
  * Not controlled: Web Workers, real network timing, audio, and media other than <video>.
  */
@@ -24,7 +25,11 @@
 
   var RealDate = Date;
   var realSetTimeout = window.setTimeout.bind(window);
-  var base = window.__OT_NOW != null ? +window.__OT_NOW : RealDate.now();
+  // The app's wall clock: --now, else real time. Carried across page loads in the tab
+  // (sessionStorage), so dates keep moving forward when the tour navigates.
+  var carried = null;
+  try { carried = window.sessionStorage.getItem('__ot_vnow'); } catch (e) { /* opaque origin */ }
+  var base = carried != null ? +carried : window.__OT_NOW != null ? +window.__OT_NOW : RealDate.now();
   var now = 0;                     // virtual ms since the page started
   var creep = 0;                   // tiny per-read advance inside the current frame
   var frameMs = 1000 / 60;
@@ -184,6 +189,7 @@
     var seeking = syncVideos();
     if (seeking) await seeking;
     creep = 0;
+    try { window.sessionStorage.setItem('__ot_vnow', String(base + now)); } catch (e) { /* ignore */ }
     return now;
   }
 

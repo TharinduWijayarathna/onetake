@@ -10,7 +10,9 @@
   ],
   "scripts": {
     "build": "node scripts/build.js",
-    "test": "node scripts/build.js && node test/smoke.js"
+    "test": "node scripts/build.js && node test/smoke.js",
+    "example": "node tools/record.js --url examples/demo.html --script examples/tour.js --out recordings --width 1280 --height 760",
+    "record": "node tools/record.js"
   },
   "keywords": [
     "demo",

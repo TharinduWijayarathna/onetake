@@ -1,0 +1,14 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Datepicker</title><link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="/node_modules/flowbite-datepicker/dist/css/datepicker.css">
+<script src="/node_modules/flowbite-datepicker/dist/js/datepicker-full.min.js"></script></head>
+<body><main>
+  <h1>Book a call (datepicker)</h1>
+  <label for="date">Date</label><input id="date" autocomplete="off" placeholder="Pick a date">
+</main>
+<script>
+  new Datepicker(document.getElementById('date'), { autohide: true, format: 'yyyy-mm-dd' });
+  window.__verify = function () {
+    var v = document.getElementById('date').value;
+    return { ok: /^2026-11-15$/.test(v), detail: v };   // the --now date picks the month
+  };
+</script></body></html>

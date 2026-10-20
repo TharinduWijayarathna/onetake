@@ -133,7 +133,7 @@ function reportError(result) {
 
 async function check(cfg, browser) {
   const { checkTour } = require('./lib/realtime');
-  const base = baseName(Object.assign({}, cfg, { name: cfg.name || 'check' }));
+  const base = baseName(Object.assign({}, cfg, { name: 'check' }));   // <out>/check.failure.png
   const quick = Object.assign({}, cfg, { lead: 0, tail: 0 });
   console.log(`▶ checking ${cfg.tour.map(t => path.relative(process.cwd(), t)).join(', ')} on ${cfg.url}`);
   const result = await checkTour(browser, quick, { base });

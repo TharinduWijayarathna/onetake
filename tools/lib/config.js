@@ -56,6 +56,9 @@ const FLAGS = {
   'auto-zoom': 'options.autoZoom', timeline: 'timeline', config: null, watch: null, help: null
 };
 const LISTS = new Set(['tour', 'include', 'formats']);
+/** Flags that are switches: they never take the next argument (unless it is true/false). */
+const BOOLEANS = new Set(['headed', 'realtime', 'watch', 'help', 'sound', 'auto-zoom', 'timeline', 'real-input',
+  'subtitles', 'chapters', 'thumbnail', 'shadow']);
 const NUMBERS = new Set(['viewport.width', 'viewport.height', 'scale', 'fps', 'speed', 'seed', 'lead', 'tail', 'max', 'crf',
   'musicVolume', 'frame.padding', 'frame.radius']);
 const PATHS = ['storage', 'out', 'music'];
@@ -64,7 +67,9 @@ function setPath(obj, key, value) {
   const parts = key.split('.');
   let o = obj;
   for (let i = 0; i < parts.length - 1; i++) {
-    if (o[parts[i]] === true || o[parts[i]] == null || typeof o[parts[i]] !== 'object') o[parts[i]] = {};
+    const cur = o[parts[i]];
+    if (parts[i] === 'frame' && typeof cur === 'string' && cur !== 'true') o[parts[i]] = { background: cur };   // --frame ocean --title X
+    else if (cur === true || cur == null || typeof cur !== 'object') o[parts[i]] = {};
     o = o[parts[i]];
   }
   o[parts[parts.length - 1]] = value;
@@ -83,8 +88,9 @@ function parseArgs(argv) {
     if (name.startsWith('no-') && !(name in FLAGS)) { negate = true; name = name.slice(3); }
     if (!(name in FLAGS)) throw new Error(`Unknown option --${name}. Run "onetake help" for the list.`);
     const key = FLAGS[name];
-    const takesValue = value === undefined && !negate && argv[i + 1] != null && !argv[i + 1].startsWith('--') &&
-      !['headed', 'realtime', 'watch', 'help', 'sound'].includes(name) && !(name === 'frame' && /\.(js|json)$|^--/.test(argv[i + 1] || ''));
+    const next = argv[i + 1];
+    const takesValue = value === undefined && !negate && next != null && !next.startsWith('--') &&
+      (BOOLEANS.has(name) ? /^(true|false)$/.test(next) : !(name === 'frame' && /\.(m?js|cjs|json)$/.test(next)));
     if (takesValue) value = argv[++i];
     if (key === null) { out.meta[name] = value === undefined ? true : value; continue; }
     if (key.includes('=')) { const [k, v] = key.split('='); out.flags[k] = negate ? DEFAULTS[k] : v; continue; }

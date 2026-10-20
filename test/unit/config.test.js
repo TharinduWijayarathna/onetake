@@ -53,3 +53,11 @@ test('resolving twice does not duplicate tours (watch mode)', () => {
   resolveConfig(parsed, os.tmpdir());
   assert.equal(resolveConfig(parsed, os.tmpdir()).tour.length, 1);
 });
+
+test('switches never swallow the tour path; --frame <bg> keeps --title', () => {
+  const a = parseArgs(['record', '--auto-zoom', 'tour.js', '--timeline', 'more.js', '--frame', 'ocean', '--title', 'Acme']);
+  assert.deepEqual(a.positional, ['tour.js', 'more.js']);
+  assert.equal(a.flags.options.autoZoom, true);
+  assert.deepEqual(a.flags.frame, { background: 'ocean', title: 'Acme' });
+  assert.equal(parseArgs(['record', '--sound', 'false']).flags.sound, false);
+});

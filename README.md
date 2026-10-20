@@ -1,6 +1,14 @@
-# OneTake
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="assets/logo-dark.svg">
+    <img src="assets/logo.svg" alt="OneTake" height="64">
+  </picture>
+</p>
 
-> Script your product demo once. Get a perfect video every take.
+<p align="center"><b>Script your product demo once. Get a perfect video every take.</b></p>
+<p align="center">Human-like cursor · camera zoom · hand-drawn highlights · 60 fps render</p>
+
+---
 
 A small, dependency-free JavaScript library for **scripted product demo videos**.
 It drives your real UI (clicks, typing, selects, checkboxes, tabs, scrolling) while
@@ -45,6 +53,7 @@ to a video with `npm run example`.
 | `tools/studio.js`, `tools/studio/` | **OneTake Studio**: make a demo by clicking through your app, marking zooms and highlights, then Generate / Render. |
 | `tools/save-login.js` | Saves a signed-in session (Playwright storageState) for recording apps behind a login. |
 | `templates/demo-kit/` | Starter kit to copy next to a project: `record.sh` (one-command render) + a page-script skeleton. |
+| `assets/` | The logo, icon and social preview, plus the brand guide ([`assets/BRAND.md`](assets/BRAND.md)). |
 | `AGENTS.md`, `skills/`, `llms.txt` | Guides for AI agents: how to make a demo video of any project with OneTake. |
 
 ---

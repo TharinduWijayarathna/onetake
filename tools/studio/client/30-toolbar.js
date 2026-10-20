@@ -7,7 +7,9 @@
     '*{box-sizing:border-box;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}',
     '.bar{position:fixed;top:12px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:4px;padding:6px;border-radius:14px;',
     '  background:rgba(17,24,39,.94);color:#f9fafb;box-shadow:0 10px 30px rgba(0,0,0,.35);pointer-events:auto;font-size:13px;user-select:none;z-index:6}',
-    '.brand{padding:0 8px 0 6px;font-weight:700;letter-spacing:.2px;cursor:grab;color:#a5b4fc}',
+    '.brand{display:flex;align-items:center;gap:7px;padding:0 8px 0 2px;font-weight:800;letter-spacing:-.2px;cursor:grab;color:#f9fafb;font-size:14px}',
+    '.brand svg{width:22px;height:22px;display:block;flex:none}',
+    '.brand em{font-style:normal;color:#a5b4fc}',
     '.bar button{all:unset;cursor:pointer;padding:7px 10px;border-radius:9px;color:#e5e7eb;white-space:nowrap;line-height:1}',
     '.bar button:hover{background:rgba(255,255,255,.1)}',
     '.bar button[disabled]{opacity:.35;cursor:default;background:none}',
@@ -35,6 +37,9 @@
     '[hidden]{display:none!important}'
   ].join('\n');
 
+  /** The OneTake mark (assets/icon.svg), inlined so the toolbar needs no network. */
+  var BRAND_MARK = '<svg viewBox="0 0 64 64" aria-hidden="true"><defs><linearGradient id="ots-g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#6366f1"/><stop offset="1" stop-color="#4338ca"/></linearGradient></defs><rect width="64" height="64" rx="15" fill="url(#ots-g)"/><path d="M13 23L13 13L23 13" fill="none" stroke="#fff" stroke-width="4.2" stroke-linecap="round" stroke-linejoin="round" opacity=".95"/><path d="M41 13L51 13L51 23" fill="none" stroke="#fff" stroke-width="4.2" stroke-linecap="round" stroke-linejoin="round" opacity=".95"/><path d="M51 41L51 51L41 51" fill="none" stroke="#fff" stroke-width="4.2" stroke-linecap="round" stroke-linejoin="round" opacity=".95"/><path d="M23 51L13 51L13 41" fill="none" stroke="#fff" stroke-width="4.2" stroke-linecap="round" stroke-linejoin="round" opacity=".95"/><path d="M24 20L24 43.5L30.2 37.6L34.4 46.6L38.6 44.8L34.5 35.9L42.6 35.6Z" fill="#fff" stroke="#1e1b4b" stroke-opacity=".18" stroke-width="1" stroke-linejoin="round"/><circle cx="42.5" cy="21.5" r="4" fill="#ef4444" stroke="#fff" stroke-width="1.8"/></svg>';
+
   var UI = {};
 
   function el(tag, attrs, html) {
@@ -59,7 +64,7 @@
     root.appendChild(el('style', null, STUDIO_CSS));
 
     UI.bar = el('div', { class: 'bar', role: 'toolbar' },
-      '<span class="brand" title="Drag to move">OneTake</span>' +
+      '<span class="brand" title="OneTake Studio (drag to move)">' + BRAND_MARK + '<span>One<em>Take</em></span></span>' +
       '<button data-act="record" class="rec" title="Alt+R"><i></i><span>Record</span></button>' +
       '<button data-act="mark" title="Pick an element to zoom on or highlight (Alt+M)">✎ Mark</button>' +
       '<button data-act="caption" title="Add a line of narration">💬 Caption</button>' +

@@ -117,7 +117,7 @@ declare namespace OneTake {
   interface TypeOptions extends ActionOptions {
     /** Click the field first. Default true. */
     click?: boolean;
-    /** Clear the field first. Default false. */
+    /** Clear the field first. Default true. */
     clear?: boolean;
     /** Press Enter afterwards. */
     enter?: boolean;
@@ -133,7 +133,7 @@ declare namespace OneTake {
     strokeWidth?: number;
     /** ms to draw the shape. Default 750. */
     drawDuration?: number;
-    /** ms before it is removed (Infinity = until clearHighlights()). Default 2600. */
+    /** ms before it is removed (0 = until clearHighlights()). Default 2600. */
     duration?: number;
     /** Wait for the highlight to be removed before the next step. Default true. */
     block?: boolean;
@@ -307,9 +307,10 @@ declare namespace OneTake {
     /** Add a chainable step made of other steps. */
     define(name: string, fn: (take: OneTake, ...args: any[]) => void): Static;
     /** Find one element for a target (strict for text/label/role). Throws if ambiguous. */
-    query(target: Target, root?: ParentNode): Element | null;
-    resolveAll(target: Target, root?: ParentNode): Element[];
+    query(target: Target): Element | null;
+    resolveAll(target: Target): Element[];
     findByText(text: string, root?: ParentNode): Element | null;
+    readonly version: string;
     findByLabel(text: string, root?: ParentNode): Element | null;
     /** Recorder hook: the part of the page on screen (keeps captions inside it). */
     view(v: { x: number; y: number; width: number; height: number } | null): void;

@@ -59,7 +59,7 @@
   P.caption = function (text, o) {
     return this._step('caption', arguments, function () {
       this._setCaption(text, o);
-      return sleep(((o && o.wait) || 350) / this.opts.speed);
+      return sleep((o && o.wait != null ? o.wait : 350) / this.opts.speed);
     });
   };
   P.hideCaption = function () {

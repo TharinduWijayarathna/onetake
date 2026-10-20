@@ -136,6 +136,8 @@ function resolveConfig({ flags = {}, positional = [], meta = {} }, cwd = process
       if (v === undefined) continue;
       if (k === 'viewport' || k === 'options') cfg[k] = Object.assign({}, cfg[k], v);
       else if (k === 'frame' && v && typeof v === 'object') cfg.frame = Object.assign({}, cfg.frame && typeof cfg.frame === 'object' ? cfg.frame : {}, v);
+      else if (k === 'frame' && typeof v === 'string' && v !== 'true' && cfg.frame && typeof cfg.frame === 'object') cfg.frame = Object.assign({}, cfg.frame, { background: v });
+      else if (k === 'frame' && (v === true || v === 'true') && cfg.frame && typeof cfg.frame === 'object') { /* keep the configured frame */ }
       else cfg[k] = v;
       if (k === 'tour' || k === 'include') cfg[k] = [].concat(v).map(p => abs(p, from));
       if (PATHS.includes(k)) cfg[k] = abs(v, from);

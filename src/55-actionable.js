@@ -53,7 +53,7 @@
       (function poll() {
         if (self._aborted) return reject(new Error('OneTake: stopped'));
         var reason;
-        if (!el.isConnected) return reject(new Error('cannot ' + verb + ' ' + describeEl(el) + ': it was removed from the page'));
+        if (!el.isConnected) { var gone = new Error('cannot ' + verb + ' ' + describeEl(el) + ': it was removed from the page'); gone.stale = true; return reject(gone); }
         if (!isVisible(el)) reason = 'it is not visible';
         else if (o.enabled !== false && isDisabled(el)) reason = 'it is disabled';
         else {
@@ -78,24 +78,35 @@
    * Re-checks after the move, because hover effects can shift layouts. Resolves with the element.
    */
   P._approach = function (target, o) {
-    var self = this;
+    var self = this, rounds = 0;
     o = o || {};
-    return this._resolve(target, o.timeout).then(function (el) {
-      return self._ensureInView(el).then(function () {
-        if (!o.actionable || o.force) {
-          var p = self._pointIn(el, o);
-          return self._moveToPoint(p.x, p.y, o).then(function () { return el; });
-        }
-        var tries = 0;
-        return (function attempt() {
-          return self._waitActionable(el, o).then(function (pt) {
-            return self._moveToPoint(pt.x, pt.y, o).then(function () {
-              var v = self._toVisual(self.pos.x, self.pos.y);
-              if (receives(el, hitTest(v.x, v.y)) || ++tries >= 3) return el;
-              return attempt();                               // something moved under the cursor: aim again
+    var stale = function (el) { if (!el.isConnected) { var e = new Error('stale'); e.stale = true; throw e; } };
+    function go() {
+      return self._resolve(target, o.timeout).then(function (el) {
+        return self._ensureInView(el).then(function () {
+          stale(el);
+          if (!o.actionable || o.force) {
+            var p = self._pointIn(el, o);
+            return self._moveToPoint(p.x, p.y, o).then(function () { return el; });
+          }
+          var tries = 0;
+          return (function attempt() {
+            return self._waitActionable(el, o).then(function (pt) {
+              return self._moveToPoint(pt.x, pt.y, o).then(function () {
+                stale(el);
+                var v = self._toVisual(self.pos.x, self.pos.y);
+                if (receives(el, hitTest(v.x, v.y)) || ++tries >= 3) return el;
+                return attempt();                               // something moved under the cursor: aim again
+              });
             });
-          });
-        })();
+          })();
+        });
+      }).catch(function (e) {
+        // The app re-rendered the element (virtual lists, React keys): find it again and re-aim.
+        if (e && e.stale && !(target && target.nodeType) && ++rounds < 4) return go();
+        throw e;
       });
-    });
+    }
+    return go();
   };
+

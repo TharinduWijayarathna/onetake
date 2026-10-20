@@ -35,20 +35,23 @@
     try { window.__otReport(assign({ type: type }, data)); } catch (e) { /* the recorder may be gone */ }
   }
 
-  /** "tour.js:12" for the script line that called a chain method (from the stack trace). */
+  /**
+   * "tour.js:12" for the script line that called a chain method (from the stack trace).
+   * A step queued by a helper (OneTake.define, an include) also names the tour line:
+   * "steps.js:4 ← tour.js:12".
+   */
   function callSite() {
     var stack = (new Error()).stack || '';
-    var lines = stack.split('\n');
+    var lines = stack.split('\n'), sites = [];
     for (var i = 1; i < lines.length; i++) {
       var l = lines[i];
       if (/onetake(\.min)?\.js/.test(l)) continue;                // frames inside the library itself
       var m = l.match(/([^\s(@]+):(\d+):(\d+)\)?\s*$/);
-      if (m && !/^(native|<anonymous>)$/.test(m[1])) {
-        var file = m[1].replace(/^.*[\\/]/, '');
-        return file + ':' + m[2];
-      }
+      if (m && !/^(native|<anonymous>)$/.test(m[1])) sites.push(m[1].replace(/^.*[\\/]/, '') + ':' + m[2]);
     }
-    return null;
+    if (!sites.length) return null;
+    var first = sites[0], last = sites[sites.length - 1];
+    return first.split(':')[0] !== last.split(':')[0] ? first + ' ← ' + last : first;
   }
 
   /* ---------- module registry ---------- */

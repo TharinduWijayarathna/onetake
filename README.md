@@ -70,10 +70,6 @@ npx onetake check         # try the tour
 npx onetake record        # → videos/demo.mp4
 ```
 
-Or try the example in this repo: `npm install && npm run example`. The tour is
-[`examples/tour.js`](examples/tour.js), and you can open
-[`examples/demo.html`](examples/demo.html) in a browser and press ▶ to watch it live.
-
 ## Documentation
 
 | | |
@@ -114,11 +110,10 @@ dist/onetake.js       the built library (committed, so it works without a build 
 types/                TypeScript types
 scripts/build.js      src/library/ → dist/onetake.js
 docs/                 documentation
-examples/             a sample CRM and its tour
 templates/demo-kit/   the starter kit for a project
 skills/               the Claude skill (with AGENTS.md, CLAUDE.md and llms.txt at the root)
 test/unit/            node:test unit tests
-test/e2e/             smoke, compatibility, recorder and visual tests
+test/e2e/             compatibility, recorder and visual tests
 test/fixtures/        small apps the tests drive · test/golden/ reference frames · test/helpers/
 assets/               logo, icon, social preview, brand guide
 ```
@@ -128,7 +123,7 @@ assets/               logo, icon, social preview, brand guide
 ```bash
 npm install && npx playwright install chromium
 npm run build          # src/ → dist/onetake.js
-npm test               # build, unit tests, smoke test
+npm test               # build + unit tests
 npm run test:compat    # frameworks and widgets, trusted and synthetic input
 npm run test:record    # the recorder and renderer end to end
 ```

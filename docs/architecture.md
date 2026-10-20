@@ -8,11 +8,10 @@ dist/onetake.js       the built library (committed, so it works without a build 
 types/                TypeScript types
 scripts/build.js      src/library/ → dist/onetake.js
 docs/                 documentation
-examples/             a sample CRM and its tour
 templates/demo-kit/   the starter kit for a project
 skills/               the Claude skill (with AGENTS.md, CLAUDE.md and llms.txt at the root)
 test/unit/            node:test unit tests
-test/e2e/             smoke, compatibility, recorder and visual tests
+test/e2e/             compatibility, recorder and visual tests
 test/fixtures/        small apps the tests drive · test/golden/ reference frames · test/helpers/
 assets/               logo, icon, social preview, brand guide
 ```

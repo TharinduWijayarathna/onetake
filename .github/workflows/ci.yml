@@ -20,7 +20,7 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npx playwright install --with-deps chromium
-      - name: Unit tests + smoke test
+      - name: Build + unit tests
         run: npm test
       - name: Compatibility suite (React, Vue, Alpine, shadow DOM, iframes, …)
         run: node test/e2e/compat.js

@@ -11,7 +11,7 @@ OneTake waits until the target is:
 
 1. **in the page and visible**: rendered, not `display:none`, with a size;
 2. **enabled**: not `:disabled`, and not inside `[aria-disabled=true]` or a disabled `<fieldset>`;
-3. **stable**: it hasn't moved for a couple of frames, so a dialog that's still animating in won't be clicked mid-slide;
+3. **stable**: it's in the same place as on the previous frame, so a dialog that's still animating in won't be clicked mid-slide;
 4. **the thing under the cursor**: no modal backdrop, toast, cookie banner or loading overlay on top of it.
 
 It scrolls the element into view first and aims at a point that really receives the click.

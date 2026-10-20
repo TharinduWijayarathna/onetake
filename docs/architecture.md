@@ -71,7 +71,7 @@ carries over page loads.
 | `lib/session.js` | Opens the page, exposes the bridge, runs the tour, and **resumes it after page loads** (re-inject the library, run the same script with `resumeFrom`; a step that already clicked or typed isn't repeated). It serialises trusted input, collects the timeline, holds the clock while a navigation is in flight, and carries the caption over. |
 | `lib/frames.js` | The frame driver: wait for pending input and navigations, `tick(1/fps)`, read the status, capture (with the camera or `--aspect` clip), pipe to ffmpeg. |
 | `lib/realtime.js` | The realtime driver (Playwright screencast), and `check`. |
-| `lib/render.js` | One ffmpeg pass: frame (Chromium-rendered background and mask, alphamerge, overlay), cards (xfade), audio (amix), subtitles (mov_text), chapters (FFMETADATA); then the thumbnail, WebM and GIF. Without frame, cards or audio, the captured stream is copied as is. |
+| `lib/render.js` | One ffmpeg pass: frame (Chromium-rendered background and mask, alphamerge, overlay), cards (xfade), audio (amix), subtitles (mov_text), chapters (FFMETADATA); then the thumbnail, WebM and GIF. Without frame, cards, sound or music (frames mode), the captured stream is copied as is. |
 | `lib/audio.js` | Synthesised click and key sounds, mixed in Node into a WAV. |
 | `save-login.js` | `onetake login`. |
 

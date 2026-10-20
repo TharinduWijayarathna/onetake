@@ -29,7 +29,7 @@ Every action takes a **target**: the thing to click, type into, zoom on or highl
 the step fails right away with a message that lists them and suggests a fix:
 
 ```
-"text=Open" matches 3 elements: <button> "Open", <button> "Open", <a.nav> "Open"…
+"text=Open" matches 3 elements: <button> "Open", <button> "Open", <a.nav> "Open".
 Make it unique: scope it ("#form >> text=Open"), pick one ("text=Open >> nth=0"),
 or use text*= to take the shortest match.
 ```
@@ -72,7 +72,7 @@ take.click('tbody tr >> nth=2 >> text=Edit')         // the third row's Edit lin
 | `button` | `<button>`, `input[type=button/submit/reset]`, `[role=button]` |
 | `link` | `a[href]`, `[role=link]` |
 | `textbox` | text inputs, `<textarea>`, contenteditable, `[role=textbox]` |
-| `checkbox` / `radio` | inputs of that type, `[role=checkbox]`, `[role=switch]`, `[role=radio]` |
+| `checkbox` / `radio` | inputs of that type, `[role=checkbox]` and `[role=switch]`, `[role=radio]` |
 | `combobox` | `<select>`, `[role=combobox]` |
 | `heading` | `h1`–`h6`, `[role=heading]` |
 | `dialog` | `<dialog>`, `[role=dialog]`, `[role=alertdialog]` |

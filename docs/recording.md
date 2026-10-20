@@ -53,7 +53,7 @@ module.exports = {
 | `fps` | `--fps` | `60` | Frames per second (frame-by-frame mode). |
 | `mode` | `--realtime` | `'frames'` | `'frames'` or `'realtime'` (see [Capture modes](#capture-modes)). |
 | `speed` | `--speed` | `1` | Tour speed. |
-| `seed` | `--seed` | `7` | Fixes `Math.random`: cursor paths, typing rhythm and shapes repeat exactly. |
+| `seed` | `--seed` | `7` | Fixes `Math.random` (in every mode): cursor paths, typing rhythm and shapes repeat exactly. |
 | `now` | `--now` | real time | The page's date and time, e.g. `2026-11-02T09:00`. |
 | `realInput` | `--no-real-input` | `true` | Trusted mouse and keyboard input. Turn it off to use synthetic events. |
 | `options` | `--auto-zoom` | `{}` | OneTake options for the page ([API](api.md#options)). |
@@ -89,7 +89,8 @@ lists every step with the line it came from:
 ```
 
 When a step fails, it stops, prints the reason, and saves `<out>/check.failure.png` and
-`check.failure.html` (a screenshot and the page's HTML at that moment). The exit code is 1,
+`check.failure.html` (a screenshot and the page's HTML at that moment). A failed
+`record` saves `<out>/<name>.failure.png` and `.html` the same way. The exit code is 1,
 so `check` also works as a test in CI.
 
 ## Capture modes

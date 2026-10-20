@@ -134,7 +134,7 @@ Make it look professional:
   (`'.datepicker.active >> text=15'`), avoid disabled dates.
 - Masked inputs reformat values (`1500` → `1,500`). Expect what the app shows.
 - Re-runs create records and unique fields can clash. Reset the demo data first, or see
-  `docs/recipes.md`. `Math.random` and `Date` are seeded and frozen in the recorder.
+  `docs/recipes.md`. The recorder seeds `Math.random`, and `--now` fixes `Date`.
 - Code outside the chain runs again after every page load. Keep it side-effect free.
 - Cross-origin iframes (Stripe, YouTube) can't be scripted. Same-origin ones can:
   `'#frame >> label=Card'`.

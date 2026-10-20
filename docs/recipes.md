@@ -172,8 +172,8 @@ Tours perform real actions. Rendering twice creates two records, and unique fiel
 slugs) can clash. The best fix is to reset the data ([Seeding demo data](#seeding-demo-data))
 or delete the record at the end of the tour, so every take is identical.
 
-If you need a value that differs between takes, don't use `Math.random()` or `Date.now()`.
-The recorder seeds and freezes those, so they're the same in every take. Use
+If you need a value that differs between takes, don't use `Math.random()`: the recorder
+seeds it, so it's the same in every take. `Date.now()` is fixed too with `--now`. Use
 `crypto.getRandomValues`, and keep the value out of the shot where you can:
 
 ```js

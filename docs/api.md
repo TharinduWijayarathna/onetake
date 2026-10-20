@@ -33,7 +33,7 @@ Movement options (also accepted by actions): `duration` (ms, default from the di
 
 | Step | |
 |---|---|
-| `click(target, o?)` | Press-and-release with a ripple. `o.button`: `'left'` (default), `'right'`, `'middle'`. |
+| `click(target, o?)` | Press-and-release with a ripple. `o.button`: `'left'` (default), `'right'`, `'middle'` (with the recorder's trusted input). |
 | `doubleClick(target, o?)` | |
 | `type(target, text, o?)` | Click into the field, select and delete what's there, then type with a natural rhythm. `\n` presses Enter. |
 | `clear(target)` | Empty a field the way a person does (select all, delete). |

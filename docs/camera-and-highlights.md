@@ -63,7 +63,7 @@ take
 ```
 
 Shapes are drawn like a pen stroke, slightly imperfect. The recorder seeds the randomness
-(`--seed`, 7 by default), so every take draws them the same way. They follow their element while the page scrolls,
+(`--seed`, 7 by default, in every mode), so every take draws them the same way. They follow their element while the page scrolls,
 resizes or zooms.
 
 | Option | Default | |

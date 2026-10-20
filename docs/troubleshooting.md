@@ -13,14 +13,15 @@ Nothing (visible) matched while the step waited.
 
 - Open `check.failure.png`. Is the tour on the page you think it is? A step before it may
   have done something else, so add an `expect()` after it.
-- Text targets are exact: `text=Save` doesn't match "Save changes". Use the full text,
-  `text*=Save`, or `role=button[name*="Save"]`.
+- Exact text wins: if a page has both "Save" and "Save changes", `text=Save` is the first.
+  When nothing matches exactly, `text=` falls back to "contains". Check the spelling, or use
+  `role=button[name*="Save"]`.
 - The element may be in a cross-origin iframe (can't be scripted), or in a closed shadow root.
 - Slow page? `{ timeout: 20000 }` on the step, or a higher `waitTimeout`.
 
 ### `"text=Open" matches 3 elements: …`
 
-`text=`, `label=` and `role=` must be unique. Scope the target (`'#card-3 >> text=Open'`),
+`text=`, `label=` and `role=` must be unique (the error lists up to four of the matches). Scope the target (`'#card-3 >> text=Open'`),
 pick one (`'text=Open >> nth=0'`), or use `text*=` to take the shortest match.
 See [Targets](targets.md#strict-matching).
 

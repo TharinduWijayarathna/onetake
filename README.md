@@ -67,7 +67,7 @@ npm install --save-dev github:TharinduWijayarathna/one-take
 npx playwright install chromium
 npx onetake init          # onetake.config.js + tour.js
 npx onetake check         # try the tour
-npx onetake record        # → recordings/demo.mp4
+npx onetake record        # → videos/demo.mp4
 ```
 
 Or try the example in this repo: `npm install && npm run example`. The tour is

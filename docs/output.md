@@ -121,6 +121,7 @@ or use a narrower viewport (`--width 1080 --height 1350`).
 | `--format png` | Lossless frame capture. Slower; it only matters for very fine gradients. |
 | `--fps 30` | Half the frames, half the render time. |
 
-When no frame, cards or sound are used, the captured stream goes into the MP4 untouched.
+Without a frame, cards, sound or music (and in frame-by-frame mode), the captured stream
+goes into the MP4 untouched.
 Otherwise, it's captured at near-lossless quality and encoded once more at `crf` in the
 finishing pass.

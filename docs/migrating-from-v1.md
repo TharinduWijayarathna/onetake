@@ -6,9 +6,10 @@ A few make them stricter, and those surface as clear errors.
 ## What you might need to change
 
 **`text=` is strict now.** In v1, `text=INQ` happily matched a sidebar link called
-"Inquiries". Now `text=` is an exact match (case and spacing don't matter), it must be
-unique, and it fails right away if several elements match. The error tells you how to
-narrow it. For the old "contains" behaviour, use `text*=`.
+"Inquiries". Now exact matches win (case and spacing don't matter), "contains" is only a
+fallback when nothing matches exactly, and the target must be unique: it fails right away if
+several elements match. The error tells you how to narrow it. To ask for "contains" on
+purpose (the shortest match), use `text*=`.
 
 **Actions wait until the element can really be acted on.** A click waits for the element to
 be enabled, to stop moving, and to be uncovered. A v1 tour that clicked a disabled button,

@@ -185,7 +185,7 @@ chapters and a thumbnail. `--realtime` gives a fast live screencast. `--watch` r
 - **Masked inputs** reformat values (`1500` → `1,500`). Expect what the app shows.
 - **Re-runs create records.** Unique fields (emails, slugs) can clash. Reset the demo data at
   the start, or see [docs/recipes.md](docs/recipes.md#re-running-tours-that-create-records).
-  `Math.random` and `Date` are seeded and frozen in the recorder.
+  The recorder seeds `Math.random`, and `--now` fixes `Date`.
 - **Code outside the chain runs again on every page load.** Keep it side-effect free, or put
   it in `run()`.
 - **Cross-origin iframes** (Stripe, YouTube) can't be scripted. Same-origin ones can:

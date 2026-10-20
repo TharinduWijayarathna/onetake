@@ -161,7 +161,7 @@ Options: `speed`, `waitTimeout`, `typingDelay`, `typos`, `autoZoom`, `zoomScale`
 ## Recorder cheat sheet
 
 ```bash
-onetake init | check | record | login        # node <one-take>/tools/cli.js … from a clone
+onetake init | check | record | login        # node <one-take>/bin/onetake.js … from a clone
 onetake record tour.js --url http://localhost:3000 --storage auth.json \
   --width 1440 --height 900 --scale 2 --now 2026-11-02T09:00 \
   --frame ocean --title "Acme" --intro "Acme|Managing clients" --outro "Try Acme|acme.example" \
@@ -171,7 +171,7 @@ onetake record tour.js --url http://localhost:3000 --storage auth.json \
 `onetake.config.js` holds the same keys ([docs/recording.md](docs/recording.md)). The defaults
 are identical takes (`seed: 7`), frame-by-frame at 60 fps, 1920×1080 at scale 1, subtitles,
 chapters and a thumbnail. `--realtime` gives a fast live screencast. `--watch` re-runs on save.
-`node tools/record.js --script a.js --script b.js` (v1) still works.
+v1-style `--script a.js --script b.js` (one file per page) still works.
 
 ---
 
@@ -200,9 +200,9 @@ chapters and a thumbnail. `--realtime` gives a fast live screencast. `--watch` r
 
 ## Working on OneTake itself
 
-`src/NN-*.js` are the library modules (bundled to `dist/onetake.js` by `npm run build`).
-`tools/` holds the recorder, CLI and renderer, and `types/` the TypeScript types. `npm test`
+`src/library/NN-*.js` are the library modules (bundled to `dist/onetake.js` by `npm run build`).
+`src/recorder/` holds the recorder, CLI and renderer (entry: `bin/onetake.js`), and `types/` the TypeScript types. `npm test`
 runs the build, the unit tests and the smoke test; `npm run test:compat`,
-`npm run test:record` and `npm run test:visual` run the rest. Edit `src/`, never `dist/` by
+`npm run test:record` and `npm run test:visual` run the rest. Edit `src/library/`, never `dist/` by
 hand. Keep `docs/`, this file, `llms.txt` and `skills/` in step with the code. See
 [docs/contributing.md](docs/contributing.md).

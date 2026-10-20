@@ -9,22 +9,26 @@ npm test
 
 ## Layout
 
-| Path | |
-|---|---|
-| `src/NN-*.js` | Library modules, one per feature. Edit these, never `dist/` by hand. |
-| `scripts/build.js` | `npm run build`: `src/` → `dist/onetake.js`. Commit the rebuilt `dist/` with your change. |
-| `tools/` | The recorder, the CLI and the renderer ([Architecture](architecture.md)). |
-| `types/onetake.d.ts` | Public types. Update them with the API. |
-| `test/unit/` | `node:test` tests: config, render helpers, audio, and in-browser tests of targets, steps, actionability, settling, `expect`, the clock and the camera. |
-| `test/fixtures/` | Small apps for the compatibility suite, each with a `.tour.js` and a `window.__verify()`. |
-| `test/compat.js` | Plays every fixture with trusted and with synthetic input, and checks the result. |
-| `test/record.js` | Renders with the CLI and checks the files, identical takes, `--aspect`, realtime and check. |
-| `test/visual.js` | Compares rendered frames with `test/golden/` (SSIM). |
-| `test/smoke.js` | Plays `examples/demo.html` end to end in live mode. |
-| `docs/` | This documentation. |
-| `examples/` | The demo CRM and its tour. |
-| `templates/demo-kit/` | The starter kit for a project. |
-| `AGENTS.md`, `llms.txt`, `skills/` | Guides for AI agents. Keep them in step with the docs. |
+```
+bin/onetake.js        the `onetake` command
+src/library/          the in-page library, one module per feature → bundled into dist/onetake.js
+src/recorder/         the CLI, recorder, virtual clock and renderer (Node)
+dist/onetake.js       the built library (committed, so it works without a build step)
+types/                TypeScript types
+scripts/build.js      src/library/ → dist/onetake.js
+docs/                 documentation
+examples/             a sample CRM and its tour
+templates/demo-kit/   the starter kit for a project
+skills/               the Claude skill (with AGENTS.md, CLAUDE.md and llms.txt at the root)
+test/unit/            node:test unit tests
+test/e2e/             smoke, compatibility, recorder and visual tests
+test/fixtures/        small apps the tests drive · test/golden/ reference frames · test/helpers/
+assets/               logo, icon, social preview, brand guide
+```
+
+- Edit `src/library/`, never `dist/` by hand, then `npm run build`. Commit the rebuilt `dist/` with your change.
+- Keep `types/`, `docs/`, `AGENTS.md`, `llms.txt` and `skills/` in step with the code.
+- Each fixture is a folder in `test/fixtures/` with an `index.html` (defining `window.__verify()`) and a `tour.js`.
 
 ## Tests
 
@@ -38,11 +42,11 @@ npm test
 
 CI runs all of them on Node 18 and 22. The visual test only reports (fonts differ between
 machines). After an intended visual change, refresh the goldens with
-`node test/visual.js --update` and look at the new images before you commit them.
+`node test/e2e/visual.js --update` and look at the new images before you commit them.
 
 ## Adding a feature
 
-1. Put it in the module it belongs to, or a new `src/NN-name.js` (pick `NN` so it loads
+1. Put it in the module it belongs to, or a new `src/library/NN-name.js` (pick `NN` so it loads
    after what it uses).
 2. Public steps go through `this._step('name', arguments, fn)`. Actions approach their
    element with `this._approach(target, { actionable: true, verb })` and finish with
@@ -55,9 +59,9 @@ machines). After an intended visual change, refresh the goldens with
 
 ## Adding a fixture
 
-`test/fixtures/<name>.html` is a page served over HTTP, and `<name>.tour.js` is its tour.
+`test/fixtures/<name>/index.html` is a page served over HTTP, and `tour.js` next to it is its tour.
 The page defines `window.__verify = () => ({ ok, detail })`, which checks that the tour
-really did the job. Add the name to `ALL` in `test/compat.js`. Fixtures can load libraries
+really did the job. Add the name to `ALL` in `test/e2e/compat.js`. Fixtures can load libraries
 from `/node_modules/…` (add them as devDependencies).
 
 ## Commits

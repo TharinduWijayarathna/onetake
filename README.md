@@ -106,18 +106,22 @@ Or try the example in this repo: `npm install && npm run example`. The tour is
 
 ## Project layout
 
-| Path | |
-|---|---|
-| `dist/onetake.js` | The library: one file, no dependencies, UMD. |
-| `src/` | Library source, one module per feature. |
-| `tools/` | The `onetake` CLI, the recorder (`lib/session`, `frames`, `realtime`), the renderer (`render`, `audio`), the virtual clock, and `save-login`. |
-| `types/` | TypeScript types for the library, tours and `onetake.config.js`. |
-| `docs/` | Documentation. |
-| `examples/` | A sample CRM and its tour. |
-| `templates/demo-kit/` | Starter kit to copy next to a project. |
-| `test/` | Unit, compatibility, recorder and visual tests, and their fixtures. |
-| `AGENTS.md`, `CLAUDE.md`, `llms.txt`, `skills/` | Guides for AI agents. |
-| `assets/` | Logo, icon, social preview and the [brand guide](assets/BRAND.md). |
+```
+bin/onetake.js        the `onetake` command
+src/library/          the in-page library, one module per feature → bundled into dist/onetake.js
+src/recorder/         the CLI, recorder, virtual clock and renderer (Node)
+dist/onetake.js       the built library (committed, so it works without a build step)
+types/                TypeScript types
+scripts/build.js      src/library/ → dist/onetake.js
+docs/                 documentation
+examples/             a sample CRM and its tour
+templates/demo-kit/   the starter kit for a project
+skills/               the Claude skill (with AGENTS.md, CLAUDE.md and llms.txt at the root)
+test/unit/            node:test unit tests
+test/e2e/             smoke, compatibility, recorder and visual tests
+test/fixtures/        small apps the tests drive · test/golden/ reference frames · test/helpers/
+assets/               logo, icon, social preview, brand guide
+```
 
 ## Development
 

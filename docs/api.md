@@ -123,7 +123,7 @@ Options for zoom, highlights and captions: [Camera, highlights and captions](cam
 | `OneTake.resolveAll(target)` | Every element a target matches. |
 | `OneTake.findByText(text)`, `OneTake.findByLabel(text)` | |
 | `OneTake.defaults` | The default options. Change them before creating an instance. |
-| `OneTake.shapes` | The highlight shapes by name. Advanced: add your own drawing function (see `src/90-highlights.js` for the signature). |
+| `OneTake.shapes` | The highlight shapes by name. Advanced: add your own drawing function (see `src/library/90-highlights.js` for the signature). |
 | `OneTake.version` | |
 
 ## Options

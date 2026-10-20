@@ -19,7 +19,7 @@ recorder does the rest, including tours that cross page loads. Every take is ide
 - Use an existing clone if there is one (look next to the project, e.g. `../one-take`), or
   `git clone https://github.com/TharinduWijayarathna/one-take.git`. Inside it, run
   `npm install && npx playwright install chromium`.
-- The CLI is `node <one-take>/tools/cli.js` (`onetake` below). `onetake help` lists every flag.
+- The CLI is `node <one-take>/bin/onetake.js` (`onetake` below). `onetake help` lists every flag.
 - Copy `<one-take>/templates/demo-kit/` to `<project>-demo/`. For details beyond this skill,
   read `<one-take>/AGENTS.md` and `<one-take>/docs/` (api.md, targets.md, recipes.md,
   troubleshooting.md).

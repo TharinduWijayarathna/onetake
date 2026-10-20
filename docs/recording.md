@@ -1,7 +1,7 @@
 # Recording
 
 The recorder plays your tour in Chromium (through Playwright) and renders the video. You
-drive it with the `onetake` command (`node tools/cli.js` in a clone of the repo).
+drive it with the `onetake` command (`node bin/onetake.js` in a clone of the repo).
 
 ```bash
 onetake init                    # onetake.config.js + tour.js

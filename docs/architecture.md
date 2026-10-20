@@ -1,17 +1,34 @@
 # Architecture
 
 ```
+bin/onetake.js        the `onetake` command
+src/library/          the in-page library, one module per feature → bundled into dist/onetake.js
+src/recorder/         the CLI, recorder, virtual clock and renderer (Node)
+dist/onetake.js       the built library (committed, so it works without a build step)
+types/                TypeScript types
+scripts/build.js      src/library/ → dist/onetake.js
+docs/                 documentation
+examples/             a sample CRM and its tour
+templates/demo-kit/   the starter kit for a project
+skills/               the Claude skill (with AGENTS.md, CLAUDE.md and llms.txt at the root)
+test/unit/            node:test unit tests
+test/e2e/             smoke, compatibility, recorder and visual tests
+test/fixtures/        small apps the tests drive · test/golden/ reference frames · test/helpers/
+assets/               logo, icon, social preview, brand guide
+```
+
+```
 tour.js ──► library in the page (dist/onetake.js) ──► step reports, input requests
                  ▲                                         │
                  │ virtual clock, view, resume             ▼
-            recorder (tools/lib/session.js + frames.js / realtime.js) ──► raw video + timeline
+            recorder (src/recorder/session.js + frames.js / realtime.js) ──► raw video + timeline
                                                                          │
                                                        render (render.js, audio.js) ──► mp4, srt, vtt, chapters, jpg, webm, gif
 ```
 
-## The library (`src/` → `dist/onetake.js`)
+## The library (`src/library/` → `dist/onetake.js`)
 
-A dependency-free UMD bundle. `scripts/build.js` concatenates `src/NN-*.js` in name order
+A dependency-free UMD bundle. `scripts/build.js` concatenates `src/library/NN-*.js` in name order
 inside one closure, so a module can use anything defined in an earlier one, and adds
 `//# sourceURL=onetake.js` so stack traces can tell library frames from tour frames.
 
@@ -53,7 +70,7 @@ library works without them:
 And the recorder sets globals before page scripts run: `__OT_SEED`, `__OT_NOW`,
 `__OT_CAMERA = 'external'` and `__otStatus()`.
 
-## The virtual clock (`tools/virtual-time.js`)
+## The virtual clock (`src/recorder/clock.js`)
 
 Injected before any page script in frame mode. It replaces timers, `requestAnimationFrame`,
 `requestIdleCallback`, `Date` and `performance.now`, pauses CSS and Web Animations and
@@ -62,18 +79,22 @@ positions them on its timeline, and steps playing `<video>` elements. Only
 busy-waits on the clock still ends. The current time is kept in `sessionStorage`, so it
 carries over page loads.
 
-## The recorder (`tools/`)
+## The recorder (`src/recorder/`)
+
+`bin/onetake.js` is the command; it calls `cli.js`.
 
 | File | |
 |---|---|
-| `cli.js` | `onetake` commands, watch mode, output summary. `record.js` is the v1 entry point and calls it. |
-| `lib/config.js` | Defaults ← `onetake.config.js` ← flags. |
-| `lib/session.js` | Opens the page, exposes the bridge, runs the tour, and **resumes it after page loads** (re-inject the library, run the same script with `resumeFrom`; a step that already clicked or typed isn't repeated). It serialises trusted input, collects the timeline, holds the clock while a navigation is in flight, and carries the caption over. |
-| `lib/frames.js` | The frame driver: wait for pending input and navigations, `tick(1/fps)`, read the status, capture (with the camera or `--aspect` clip), pipe to ffmpeg. |
-| `lib/realtime.js` | The realtime driver (Playwright screencast), and `check`. |
-| `lib/render.js` | One ffmpeg pass: frame (Chromium-rendered background and mask, alphamerge, overlay), cards (xfade), audio (amix), subtitles (mov_text), chapters (FFMETADATA); then the thumbnail, WebM and GIF. Without frame, cards, sound or music (frames mode), the captured stream is copied as is. |
-| `lib/audio.js` | Synthesised click and key sounds, mixed in Node into a WAV. |
-| `save-login.js` | `onetake login`. |
+| `cli.js` | `onetake` commands, watch mode, output summary. |
+| `config.js` | Defaults ← `onetake.config.js` ← flags. |
+| `session.js` | Opens the page, exposes the bridge, runs the tour, and **resumes it after page loads** (re-inject the library, run the same script with `resumeFrom`; a step that already clicked or typed isn't repeated). It serialises trusted input, collects the timeline, holds the clock while a navigation is in flight, and carries the caption over. |
+| `frames.js` | The frame driver: wait for pending input and navigations, `tick(1/fps)`, read the status, capture (with the camera or `--aspect` clip), pipe to ffmpeg. |
+| `realtime.js` | The realtime driver (Playwright screencast), and `check`. |
+| `render.js` | One ffmpeg pass: frame (Chromium-rendered background and mask, alphamerge, overlay), cards (xfade), audio (amix), subtitles (mov_text), chapters (FFMETADATA); then the thumbnail, WebM and GIF. Without frame, cards, sound or music (frames mode), the captured stream is copied as is. |
+| `audio.js` | Synthesised click and key sounds, mixed in Node into a WAV. |
+| `clock.js` | The virtual clock (above). |
+| `login.js` | `onetake login`. |
+| `util.js` | Finding Playwright, ffmpeg and the built library. |
 
 ### Why identical takes
 

@@ -80,7 +80,12 @@
   P._approach = function (target, o) {
     var self = this, rounds = 0;
     o = o || {};
-    var stale = function (el) { if (!el.isConnected) { var e = new Error('stale'); e.stale = true; throw e; } };
+    var stale = function (el) {
+      if (el.isConnected) return;
+      var e = new Error('cannot ' + (o.verb || 'reach') + ' ' + describeEl(el) + ': it was removed from the page (the app re-rendered it)');
+      e.stale = true;
+      throw e;
+    };
     function go() {
       return self._resolve(target, o.timeout).then(function (el) {
         return self._ensureInView(el).then(function () {

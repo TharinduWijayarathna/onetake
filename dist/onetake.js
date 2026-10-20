@@ -578,10 +578,13 @@
     return list || [];
   }
 
+  /** 'text="Save"' and "text='Save'" work like text=Save (Playwright habit). */
+  function unquote(s) { s = s.trim(); return /^(["']).*\1$/.test(s) ? s.slice(1, -1) : s; }
+
   function matchPart(scope, part) {
-    if (part.indexOf('text*=') === 0) return textMatches(scope, norm(part.slice(6)), 'contains');
-    if (part.indexOf('text=') === 0) return textMatches(scope, norm(part.slice(5)), 'exact');
-    if (part.indexOf('label=') === 0) return labelMatches(scope, norm(part.slice(6)));
+    if (part.indexOf('text*=') === 0) return textMatches(scope, norm(unquote(part.slice(6))), 'contains');
+    if (part.indexOf('text=') === 0) return textMatches(scope, norm(unquote(part.slice(5))), 'exact');
+    if (part.indexOf('label=') === 0) return labelMatches(scope, norm(unquote(part.slice(6))));
     if (part.indexOf('role=') === 0) return roleMatches(scope, part.slice(5).trim());
     if (part.indexOf('css=') === 0) part = part.slice(4);
     return deepAll(scope, part);
@@ -1169,7 +1172,12 @@
   P._approach = function (target, o) {
     var self = this, rounds = 0;
     o = o || {};
-    var stale = function (el) { if (!el.isConnected) { var e = new Error('stale'); e.stale = true; throw e; } };
+    var stale = function (el) {
+      if (el.isConnected) return;
+      var e = new Error('cannot ' + (o.verb || 'reach') + ' ' + describeEl(el) + ': it was removed from the page (the app re-rendered it)');
+      e.stale = true;
+      throw e;
+    };
     function go() {
       return self._resolve(target, o.timeout).then(function (el) {
         return self._ensureInView(el).then(function () {

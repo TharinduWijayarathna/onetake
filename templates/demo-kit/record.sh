@@ -23,7 +23,7 @@ if [ ! -d "$ONETAKE" ]; then
 fi
 [ -d "$ONETAKE/node_modules/playwright" ] || (cd "$ONETAKE" && npm install --no-audit --no-fund)
 (cd "$ONETAKE" && npx playwright install chromium >/dev/null) || echo "⚠ could not run playwright install; continuing with the installed browser"
-OT=(node "$ONETAKE/tools/cli.js")
+OT=(node "$ONETAKE/bin/onetake.js")
 
 URL="$(node -e "const c=require('./onetake.config.js'); console.log(c.url || '')")"
 ORIGIN="$(node -e "try{console.log(new URL(process.argv[1]).origin)}catch(e){console.log('')}" "$URL")"

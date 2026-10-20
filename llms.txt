@@ -26,5 +26,5 @@
 ## Code
 
 - [dist/onetake.js](dist/onetake.js): the bundled library (UMD, no dependencies). [types/onetake.d.ts](types/onetake.d.ts): TypeScript types.
-- [tools/cli.js](tools/cli.js): the `onetake` command. [tools/lib/](tools/lib/): session (multi-page, trusted input), frames, realtime, render, audio, config.
+- [bin/onetake.js](bin/onetake.js): the `onetake` command. [src/recorder/](src/recorder/): cli, config, session (multi-page, trusted input), frames, realtime, clock, render, audio, login. [src/library/](src/library/): library modules bundled into dist/.
 - [examples/tour.js](examples/tour.js): a complete tour for [examples/demo.html](examples/demo.html).

@@ -1,6 +1,6 @@
 // Demo tour for examples/demo.html. `take` is a ready OneTake instance.
 //   npm run example                                   render it (recordings/example.mp4)
-//   node tools/cli.js check examples/tour.js --url examples/demo.html --speed 4   dry run
+//   node bin/onetake.js check examples/tour.js --url examples/demo.html --speed 4   dry run
 //   npm run example -- --frame --sound --intro "Northwind CRM|Adding a contact"  the polished cut
 //
 // Zoom forms used below:

@@ -1,0 +1,22 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Web component</title><link rel="stylesheet" href="../style.css"></head>
+<body><main>
+  <h1>Newsletter (web component)</h1>
+  <signup-box></signup-box>
+  <p id="out" class="muted"></p>
+</main>
+<script>
+  customElements.define('signup-box', class extends HTMLElement {
+    connectedCallback() {
+      const r = this.attachShadow({ mode: 'open' });
+      r.innerHTML = '<style>input{padding:8px;border:1px solid #cbd5e1;border-radius:8px;font:inherit}button{padding:8px 14px;border:0;border-radius:8px;background:#0ea5e9;color:#fff;font:inherit;cursor:pointer}</style>' +
+        '<label for="e">Your email</label> <input id="e" type="email"> <button>Subscribe</button>';
+      r.querySelector('button').addEventListener('click', () => {
+        document.getElementById('out').textContent = 'Subscribed ' + r.getElementById('e').value;
+      });
+    }
+  });
+  window.__verify = function () {
+    var t = document.getElementById('out').textContent;
+    return { ok: t === 'Subscribed ada@example.com', detail: t };
+  };
+</script></body></html>

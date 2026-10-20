@@ -18,7 +18,7 @@ npx playwright install chromium       # the browser the recorder drives
 your platform, install ffmpeg yourself (`brew install ffmpeg`, `apt install ffmpeg`) or point
 `FFMPEG_PATH` at one.
 
-> Working from a clone of the repo? Replace `npx onetake` with `node tools/cli.js` below.
+> Working from a clone of the repo? Replace `npx onetake` with `node bin/onetake.js` below.
 
 ## Your first video
 

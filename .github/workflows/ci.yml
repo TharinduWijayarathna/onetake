@@ -23,15 +23,15 @@ jobs:
       - name: Unit tests + smoke test
         run: npm test
       - name: Compatibility suite (React, Vue, Alpine, shadow DOM, iframes, …)
-        run: node test/compat.js
+        run: node test/e2e/compat.js
       - name: Recorder integration (frames, realtime, render outputs)
-        run: node test/record.js
+        run: node test/e2e/record.js
       - name: Types
         run: npx -y -p typescript@5.6.3 tsc -p test/types
       - name: Visual regression (informational: fonts differ between machines)
         if: matrix.node == 22
         continue-on-error: true
-        run: node test/visual.js
+        run: node test/e2e/visual.js
       - name: Keep the outputs of a failed run
         if: failure()
         uses: actions/upload-artifact@v4

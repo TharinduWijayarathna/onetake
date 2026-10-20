@@ -29,7 +29,7 @@ v1 needed one `--script` per page load. In v2, a single script continues across 
 ```bash
 # v1
 node tools/record.js --url http://localhost:3000 --script 1-list.js --script 2-form.js --script 3-done.js
-# v2 (both still work)
+# v2 (the v1 form still works: onetake record --script 1-list.js --script 2-form.js …)
 onetake record tour.js --url http://localhost:3000
 ```
 
@@ -38,8 +38,8 @@ for the next page to load can go: navigation and actionability handle it.
 
 ## The `onetake` command
 
-`node tools/record.js …` still works with every v1 flag. It's now a thin wrapper around
-`onetake record`. New:
+`node tools/record.js` is gone: use `onetake record` (or `node bin/onetake.js record` in a
+clone). It accepts every v1 flag (`--script`, `--width`, `--format`, …). New:
 
 - `onetake check`: a fast dry run with step-by-step output and failure screenshots
 - `onetake init`, `onetake login`

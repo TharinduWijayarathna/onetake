@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { setup } = require('../lib/browser');
+const { setup } = require('../helpers/browser');
 
 let env, page;
 test.before(async () => {

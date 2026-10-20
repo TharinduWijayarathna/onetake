@@ -17,7 +17,7 @@ catch (e) { console.error('Playwright is not installed. Run: npm install && npx 
   page.on('pageerror', e => errors.push(e.message));
   page.on('console', m => { if (m.type() === 'error') errors.push(m.text()); });
 
-  await page.goto('file://' + path.join(__dirname, '..', 'examples', 'demo.html') + '?autoplay&speed=4');
+  await page.goto('file://' + path.join(__dirname, '..', '..', 'examples', 'demo.html') + '?autoplay&speed=4');
   const result = await page.evaluate(() => window.__demo.then(() => 'ok', e => 'failed: ' + e.message));
   const state = await page.evaluate(() => ({
     firstRow: [...document.querySelectorAll('#contact-table tbody tr:first-child td')].map(td => td.textContent.trim()).join(' | '),

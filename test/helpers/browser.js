@@ -6,7 +6,7 @@ const { serve } = require('./server');
 
 const ROOT = path.join(__dirname, '..', '..');
 const LIB = fs.readFileSync(path.join(ROOT, 'dist', 'onetake.js'), 'utf8');
-const CLOCK = fs.readFileSync(path.join(ROOT, 'tools', 'virtual-time.js'), 'utf8');
+const CLOCK = fs.readFileSync(path.join(ROOT, 'src', 'recorder', 'clock.js'), 'utf8');
 
 async function setup() {
   const server = await serve(ROOT);

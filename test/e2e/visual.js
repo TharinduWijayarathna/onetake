@@ -4,18 +4,18 @@
  * frames with the golden images in test/golden/ (SSIM via ffmpeg). Fonts differ between
  * machines, so goldens are only comparable on the machine (or CI image) that made them.
  *   npm run test:visual             compare
- *   node test/visual.js --update    write new goldens
+ *   node test/e2e/visual.js --update    write new goldens
  */
 const fs = require('fs');
 const path = require('path');
 const { spawnSync } = require('child_process');
-const { serve } = require('./lib/server');
-const run = require('./lib/run');
-const { findFfmpeg } = require('../tools/lib/common');
+const { serve } = require('../helpers/server');
+const run = require('../helpers/run');
+const { findFfmpeg } = require('../../src/recorder/util');
 
-const ROOT = path.join(__dirname, '..');
-const OUT = path.join(__dirname, '.output', 'visual');
-const GOLD = path.join(__dirname, 'golden');
+const ROOT = path.join(__dirname, '..', '..');
+const OUT = path.join(__dirname, '..', '.output', 'visual');
+const GOLD = path.join(__dirname, '..', 'golden');
 const TIMES = [1.0, 3.0, 6.5, 12.6];      // list page, form typing, select, confirmation
 const MIN_SSIM = 0.985;
 const update = process.argv.includes('--update');
@@ -26,7 +26,7 @@ const ffmpeg = findFfmpeg();
   fs.mkdirSync(OUT, { recursive: true });
   fs.mkdirSync(GOLD, { recursive: true });
   const server = await serve(ROOT);
-  const r = await run(['record', path.join(__dirname, 'fixtures', 'multipage.tour.js'), '--url', server.url + '/test/fixtures/multipage-index.html',
+  const r = await run(['record', path.join(__dirname, '..', 'fixtures', 'multipage', 'tour.js'), '--url', server.url + '/test/fixtures/multipage/',
     '--width', '640', '--height', '400', '--fps', '30', '--now', '2026-11-02T09:00:00Z', '--seed', '3', '--out', OUT, '--name', 'v',
     '--frame', '--no-subtitles', '--no-chapters', '--no-thumbnail', '--format', 'png']);
   await server.close();

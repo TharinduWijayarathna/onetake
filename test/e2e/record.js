@@ -8,12 +8,12 @@
 const fs = require('fs');
 const path = require('path');
 const { spawnSync } = require('child_process');
-const { serve } = require('./lib/server');
-const run = require('./lib/run');
-const { findFfmpeg } = require('../tools/lib/common');
+const { serve } = require('../helpers/server');
+const run = require('../helpers/run');
+const { findFfmpeg } = require('../../src/recorder/util');
 
-const ROOT = path.join(__dirname, '..');
-const OUT = path.join(__dirname, '.output', 'record');
+const ROOT = path.join(__dirname, '..', '..');
+const OUT = path.join(__dirname, '..', '.output', 'record');
 const ffmpeg = findFfmpeg();
 const probe = f => spawnSync(ffmpeg, ['-i', f], { encoding: 'utf8' }).stderr;
 
@@ -21,7 +21,7 @@ const probe = f => spawnSync(ffmpeg, ['-i', f], { encoding: 'utf8' }).stderr;
   fs.rmSync(OUT, { recursive: true, force: true });
   fs.mkdirSync(OUT, { recursive: true });
   const server = await serve(ROOT);
-  const base = ['record', path.join(__dirname, 'fixtures', 'multipage.tour.js'), '--url', server.url + '/test/fixtures/multipage-index.html',
+  const base = ['record', path.join(__dirname, '..', 'fixtures', 'multipage', 'tour.js'), '--url', server.url + '/test/fixtures/multipage/',
     '--width', '800', '--height', '500', '--fps', '30', '--now', '2026-11-02T09:00:00Z', '--out', OUT, '--timeline'];
   const checks = [];
   const check = (name, ok, detail) => { checks.push(ok); console.log(`${ok ? '✔' : '✖'} ${name}${ok ? '' : '  → ' + detail}`); };
@@ -51,7 +51,7 @@ const probe = f => spawnSync(ffmpeg, ['-i', f], { encoding: 'utf8' }).stderr;
   const r = await run([...base.filter(x => x !== '--timeline'), '--name', 'rt', '--realtime']);
   check('realtime mode', r.code === 0 && /Video: h264/.test(probe(path.join(OUT, 'rt.mp4'))), r.out.slice(-600));
 
-  const f = await run(['check', path.join(__dirname, 'fixtures', 'react.tour.js'), '--url', server.url + '/test/fixtures/vue.html', '--out', OUT, '--speed', '4']);
+  const f = await run(['check', path.join(__dirname, '..', 'fixtures', 'react', 'tour.js'), '--url', server.url + '/test/fixtures/vue/', '--out', OUT, '--speed', '4']);
   check('check mode fails on the wrong page and saves a screenshot', f.code === 1 && fs.existsSync(path.join(OUT, 'check.failure.png')) && /step 1 expect/.test(f.out), f.out.slice(-600));
 
   await server.close();

@@ -1,37 +1,33 @@
 #!/usr/bin/env node
 /**
- * Compatibility suite: plays every fixture in test/fixtures/ (React, Vue, Alpine, a web
+ * Compatibility suite: plays every fixture in test/fixtures/<name>/ (React, Vue, Alpine, a web
  * component, an iframe, a datepicker, a combobox, a modal, uploads, drag, a virtual list,
  * a three-page flow) with trusted input and with synthetic events, then asks the page
  * whether the tour really did the job (window.__verify()).
  *
  *   npm run test:compat                 all fixtures, both input modes
- *   node test/compat.js react modal     just these
+ *   node test/e2e/compat.js react modal     just these
  */
 const path = require('path');
 const { chromium } = require('playwright');
-const { serve } = require('./lib/server');
-const { checkTour } = require('../tools/lib/realtime');
-const { resolveConfig } = require('../tools/lib/config');
+const { serve } = require('../helpers/server');
+const { checkTour } = require('../../src/recorder/realtime');
+const { resolveConfig } = require('../../src/recorder/config');
 
-const ROOT = path.join(__dirname, '..');
-const FIX = path.join(__dirname, 'fixtures');
-const ALL = {
-  multipage: 'multipage-index.html', react: 'react.html', vue: 'vue.html', alpine: 'alpine.html',
-  webcomponent: 'webcomponent.html', iframe: 'iframe.html', datepicker: 'datepicker.html', combobox: 'combobox.html',
-  modal: 'modal.html', upload: 'upload.html', drag: 'drag.html', virtual: 'virtual.html'
-};
+const ROOT = path.join(__dirname, '..', '..');
+const FIX = path.join(__dirname, '..', 'fixtures');
+const ALL = ['multipage', 'react', 'vue', 'alpine', 'webcomponent', 'iframe', 'datepicker', 'combobox', 'modal', 'upload', 'drag', 'virtual'];
 
 (async () => {
   const only = process.argv.slice(2);
-  const names = Object.keys(ALL).filter(n => !only.length || only.includes(n));
+  const names = ALL.filter(n => !only.length || only.includes(n));
   const server = await serve(ROOT);
   const browser = await chromium.launch(process.env.CHROMIUM_PATH ? { executablePath: process.env.CHROMIUM_PATH } : {});
   let failed = 0;
   for (const name of names) {
     for (const realInput of [true, false]) {
       const cfg = resolveConfig({ flags: {
-        url: `${server.url}/test/fixtures/${ALL[name]}`, tour: [path.join(FIX, name + '.tour.js')],
+        url: `${server.url}/test/fixtures/${name}/`, tour: [path.join(FIX, name, 'tour.js')],
         speed: 4, lead: 0, tail: 0, realInput, now: '2026-11-02T09:00:00Z', max: 60, viewport: { width: 1280, height: 800 }
       } }, ROOT);
       const errors = [];

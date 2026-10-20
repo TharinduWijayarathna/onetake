@@ -1,7 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { captionCues, chapterList, toSrt, toVtt, ffmeta, youtube, frameLayout } = require('../../tools/lib/render');
-const { synthTrack, RATE } = require('../../tools/lib/audio');
+const { captionCues, chapterList, toSrt, toVtt, ffmeta, youtube, frameLayout } = require('../../src/recorder/render');
+const { synthTrack, RATE } = require('../../src/recorder/audio');
 
 test('caption cues: carry-over across page loads is merged, hide and duration end cues', () => {
   const cues = captionCues([

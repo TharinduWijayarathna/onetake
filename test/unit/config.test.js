@@ -3,7 +3,7 @@ const assert = require('node:assert/strict');
 const path = require('path');
 const fs = require('fs');
 const os = require('os');
-const { parseArgs, resolveConfig } = require('../../tools/lib/config');
+const { parseArgs, resolveConfig } = require('../../src/recorder/config');
 
 test('parses commands, positionals, values, booleans and negations', () => {
   const a = parseArgs(['record', 'tour.js', '--url', 'http://x', '--fps', '30', '--headed', '--no-subtitles', '--formats', 'webm,gif']);

@@ -30,8 +30,8 @@
   },
   "scripts": {
     "build": "node scripts/build.js",
-    "test": "node scripts/build.js && node --test test/unit/ && node test/smoke.js",
-    "test:unit": "node --test test/unit/",
+    "test": "node scripts/build.js && node --test test/unit/*.test.js && node test/smoke.js",
+    "test:unit": "node --test test/unit/*.test.js",
     "test:compat": "node scripts/build.js && node test/compat.js",
     "test:record": "node scripts/build.js && node test/record.js",
     "test:visual": "node scripts/build.js && node test/visual.js",

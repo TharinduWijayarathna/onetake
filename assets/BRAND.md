@@ -12,7 +12,7 @@ being recorded. **The wordmark** is "OneTake" set in Inter Display ExtraBold, wi
 |---|---|
 | `logo.svg` | Mark + wordmark for light backgrounds (README, docs) |
 | `logo-dark.svg` | Mark + wordmark for dark backgrounds |
-| `icon.svg` | The mark alone: app icon, favicon, avatars, the Studio toolbar |
+| `icon.svg` | The mark alone: app icon, favicon, avatars |
 | `icon-512.png` | The mark as a PNG, for places that don't take SVG |
 | `social-preview.png` | 1280×640 GitHub social preview (repo Settings → Social preview) |
 
@@ -27,14 +27,14 @@ All of them are generated: edit `scripts/brand.py` (logos, icon) or `scripts/soc
 | Indigo 700 | `#4338ca` | Tile gradient end |
 | Indigo 600 | `#4f46e5` | "Take" on light backgrounds, primary buttons, focus |
 | Indigo 300 | `#a5b4fc` | "Take" on dark backgrounds, accents on dark |
-| Ink | `#111827` | Text, dark surfaces (Studio toolbar, captions) |
+| Ink | `#111827` | Text, dark surfaces (captions, overlays) |
 | Paper | `#f9fafb` | Text on dark |
 | Record red | `#ef4444` | The record dot, the Record button, default highlight colour |
 
 ## Type
 
 - Wordmark and headlines: **Inter Display** ExtraBold / Bold, slightly tight tracking.
-- UI and body: the system UI stack (`system-ui, -apple-system, "Segoe UI", Roboto, sans-serif`), as in the overlay and Studio.
+- UI and body: the system UI stack (`system-ui, -apple-system, "Segoe UI", Roboto, sans-serif`), as in the overlay.
 
 ## Using the logo
 

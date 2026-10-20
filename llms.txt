@@ -6,7 +6,6 @@
 
 - [AGENTS.md](AGENTS.md): the full workflow for making a demo video of a project (pick a scenario from its browser tests, sign in, map the DOM, write one script per page, rehearse, render), API cheat sheet, recorder flags and gotchas.
 - [skills/onetake-demo-video/SKILL.md](skills/onetake-demo-video/SKILL.md): the same workflow as a Claude skill.
-- [tools/studio.js](tools/studio.js): OneTake Studio. A person clicks through the app and marks zooms/highlights; it generates the page scripts and renders.
 - [templates/demo-kit/](templates/demo-kit/): starter kit to copy next to a project (record.sh + page script).
 
 ## Reference

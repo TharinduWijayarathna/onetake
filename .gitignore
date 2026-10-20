@@ -1,0 +1,21 @@
+# dependencies
+node_modules/
+
+# recorder output and videos
+recordings/
+*.mp4
+*.webm
+*.mov
+
+# logs / temp
+npm-debug.log*
+*.log
+.tmp/
+coverage/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp

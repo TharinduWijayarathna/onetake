@@ -119,7 +119,7 @@
       if (self._aborted) throw new Error('OneTake: stopped');
       self._mount();
       self._current = info;
-      report('step', { index: index, name: name, site: info.site, action: !!ACTION_STEPS[name] });
+      report('step', { index: index, name: name, site: info.site, arg: info.arg, action: !!ACTION_STEPS[name] });
       if (self.opts.onStep) self.opts.onStep(name, args, info);
       return Promise.resolve(fn.call(self)).then(function (v) {
         report('stepDone', { index: index, name: name });
@@ -242,6 +242,32 @@
     return this._step('thumbnail', arguments, function () { report('thumbnail', {}); });
   };
 
+  /* ---------- reusable steps ---------- */
+
+  /**
+   * Add your own chainable step made of other steps:
+   *   OneTake.define('signIn', function (take, email) {
+   *     take.type('label=Email', email).type('label=Password', 'demo1234').click('role=button[name="Sign in"]');
+   *   });
+   *   take.signIn('ada@example.com').caption('Signed in');
+   * The function runs immediately and queues its steps in place, so it can't read the page;
+   * use take.run() inside it for that.
+   */
+  OneTake.define = function (name, fn) {
+    if (typeof fn !== 'function') throw new Error('OneTake.define(' + name + ', fn): fn must be a function');
+    if (P[name] && !P[name]._defined) throw new Error('OneTake.define: "' + name + '" is a built-in step');
+    var m = function () { fn.apply(null, [this].concat([].slice.call(arguments))); return this; };
+    m._defined = true;
+    P[name] = m;
+    return OneTake;
+  };
+
+  /** Inline a group of steps: take.use(addContact, 'Priya'). Same as calling fn(take, 'Priya'). */
+  P.use = function (fn) {
+    fn.apply(null, [this].concat([].slice.call(arguments, 1)));
+    return this;
+  };
+
   OneTake.defaults = DEFAULTS;
   OneTake.feature = feature;
   OneTake.ACTION_STEPS = ACTION_STEPS;
@@ -319,11 +345,18 @@
   }
 
   /** querySelectorAll that falls back to searching inside shadow roots when the light DOM has no match. */
-  function deepAll(scope, selector) {
+  function deepAll(scope, selector, union) {
     var found = Array.prototype.slice.call(scope.querySelectorAll(selector));
-    if (found.length) return found;
+    if (found.length && !union) return found;
     var roots = shadowRoots(scope);
     for (var i = 1; i < roots.length; i++) found = found.concat(Array.prototype.slice.call(roots[i].querySelectorAll(selector)));
+    return found;
+  }
+
+  /** Text, label and role targets look everywhere: the light DOM, every open shadow root, and the scope element itself. */
+  function deepAllWithSelf(scope, selector) {
+    var found = deepAll(scope, selector, true);
+    if (scope.nodeType === 1 && scope.matches(selector)) found.unshift(scope);
     return found;
   }
 
@@ -394,7 +427,7 @@
   function textMatches(scope, wanted, mode) {
     var wantedSquashed = squash(wanted);
     function collect(selector) {
-      var nodes = deepAll(scope, selector), exact = [], partial = [];
+      var nodes = deepAllWithSelf(scope, selector), exact = [], partial = [];
       for (var i = 0; i < nodes.length; i++) {
         var el = nodes[i];
         if (inOverlay(el)) continue;
@@ -426,7 +459,7 @@
 
   function labelMatches(scope, wanted) {
     var exact = [], prefix = [];
-    var labels = deepAll(scope, 'label');
+    var labels = deepAll(scope, 'label', true);
     for (var i = 0; i < labels.length; i++) {
       var l = labels[i], lt = labelText(l);
       if (lt !== wanted && lt.indexOf(wanted) !== 0) continue;
@@ -434,7 +467,7 @@
         l.querySelector('input,select,textarea');
       if (ctl) (lt === wanted ? exact : prefix).push(ctl);
     }
-    var ctls = deepAll(scope, 'input,select,textarea,[contenteditable],[role="textbox"],[role="combobox"]');
+    var ctls = deepAll(scope, 'input,select,textarea,[contenteditable],[role="textbox"],[role="combobox"]', true);
     for (var j = 0; j < ctls.length; j++) {
       var c = ctls[j];
       var names = [c.getAttribute('aria-label'), c.getAttribute('placeholder'), c.getAttribute('name'), labelledBy(c)];
@@ -505,7 +538,7 @@
     var m = spec.match(/^([a-z]+)(?:\[name(\*?)=(["'])(.*)\3\])?$/i);
     if (!m) throw new Error('Bad role target "role=' + spec + '". Use role=button or role=button[name="Save"].');
     var role = m[1].toLowerCase(), contains = m[2] === '*', name = m[4] != null ? norm(m[4]) : null;
-    var nodes = deepAll(scope, ROLE_SELECTORS[role] || '[role="' + role + '"]');
+    var nodes = deepAllWithSelf(scope, ROLE_SELECTORS[role] || '[role="' + role + '"]');
     return nodes.filter(function (el) {
       if (inOverlay(el) || roleOf(el) !== role || !isVisible(el)) return false;
       if (name == null) return true;
@@ -1106,7 +1139,7 @@
       (function poll() {
         if (self._aborted) return reject(new Error('OneTake: stopped'));
         var reason;
-        if (!el.isConnected) return reject(new Error('cannot ' + verb + ' ' + describeEl(el) + ': it was removed from the page'));
+        if (!el.isConnected) { var gone = new Error('cannot ' + verb + ' ' + describeEl(el) + ': it was removed from the page'); gone.stale = true; return reject(gone); }
         if (!isVisible(el)) reason = 'it is not visible';
         else if (o.enabled !== false && isDisabled(el)) reason = 'it is disabled';
         else {
@@ -1131,26 +1164,36 @@
    * Re-checks after the move, because hover effects can shift layouts. Resolves with the element.
    */
   P._approach = function (target, o) {
-    var self = this;
+    var self = this, rounds = 0;
     o = o || {};
-    return this._resolve(target, o.timeout).then(function (el) {
-      return self._ensureInView(el).then(function () {
-        if (!o.actionable || o.force) {
-          var p = self._pointIn(el, o);
-          return self._moveToPoint(p.x, p.y, o).then(function () { return el; });
-        }
-        var tries = 0;
-        return (function attempt() {
-          return self._waitActionable(el, o).then(function (pt) {
-            return self._moveToPoint(pt.x, pt.y, o).then(function () {
-              var v = self._toVisual(self.pos.x, self.pos.y);
-              if (receives(el, hitTest(v.x, v.y)) || ++tries >= 3) return el;
-              return attempt();                               // something moved under the cursor: aim again
+    var stale = function (el) { if (!el.isConnected) { var e = new Error('stale'); e.stale = true; throw e; } };
+    function go() {
+      return self._resolve(target, o.timeout).then(function (el) {
+        return self._ensureInView(el).then(function () {
+          stale(el);
+          if (!o.actionable || o.force) {
+            var p = self._pointIn(el, o);
+            return self._moveToPoint(p.x, p.y, o).then(function () { return el; });
+          }
+          var tries = 0;
+          return (function attempt() {
+            return self._waitActionable(el, o).then(function (pt) {
+              return self._moveToPoint(pt.x, pt.y, o).then(function () {
+                stale(el);
+                var v = self._toVisual(self.pos.x, self.pos.y);
+                if (receives(el, hitTest(v.x, v.y)) || ++tries >= 3) return el;
+                return attempt();                               // something moved under the cursor: aim again
+              });
             });
-          });
-        })();
+          })();
+        });
+      }).catch(function (e) {
+        // The app re-rendered the element (virtual lists, React keys): find it again and re-aim.
+        if (e && e.stale && !(target && target.nodeType) && ++rounds < 4) return go();
+        throw e;
       });
-    });
+    }
+    return go();
   };
 
   /* ---- src/57-settle.js ---- */
@@ -1351,7 +1394,8 @@
         var box = o.container ? queryTarget(o.container) : (document.scrollingElement || document.documentElement);
         if (!box) throw new Error('scroll container not found: ' + describe(o.container));
         var maxTop = box.scrollHeight - box.clientHeight;
-        if (box.scrollTop >= maxTop - 1 || n++ >= max) throw new Error('scrolled to the end but never found ' + describe(target));
+        if (box.scrollTop >= maxTop - 1) throw new Error('scrolled to the end but never found ' + describe(target));
+        if (n++ >= max) throw new Error('scrolled ' + max + ' times without finding ' + describe(target) + ' (raise maxScrolls, or use a smaller step for virtual lists)');
         var dy = o.step || box.clientHeight * 0.8;
         return self._animateScroll([box], [[box.scrollLeft, clamp(box.scrollTop + dy, 0, maxTop)]], { duration: o.duration || 500 })
           .then(function () { return sleep(120 / self.opts.speed); }).then(step);
@@ -1727,7 +1771,7 @@
         src = el;
         return self._resolve(target, o.timeout);
       }).then(function (dst) {
-        var to = self._pointIn(dst, o.to || {});
+        var to = self._pointIn(dst, o.to ? { position: o.to } : {});   // to: { x: 0..1, y: 0..1 } inside the target
         self._cursor.classList.add('ot-pressed');
         var run = self._real() ? realDrag(self, to, sp) : synthDrag(self, src, to, sp);
         return run.then(function () { self._cursor.classList.remove('ot-pressed'); });
@@ -2158,6 +2202,32 @@
     stop: function () { this._setCaption(null); }
   });
 
+  /*
+   * The recorder tells the page which part of it is on screen (camera zoom, --aspect crop),
+   * so captions stay inside the picture at a constant on-screen size:
+   *   OneTake.view({ x, y, width, height })   viewport CSS px, or null for the whole page
+   */
+  var VIEW = null;
+  function placeCaption(c) {
+    if (!c) return;
+    var st = c.style;
+    if (!VIEW) { st.left = st.bottom = st.top = st.maxWidth = st.fontSize = st.padding = st.borderRadius = ''; return; }
+    var vw = window.innerWidth, vh = window.innerHeight;
+    var k = Math.max(VIEW.width / vw, VIEW.height / vh);
+    st.left = (VIEW.x + VIEW.width / 2) + 'px';
+    if (c.classList.contains('ot-top')) { st.bottom = 'auto'; st.top = (VIEW.y + VIEW.height * 0.06) + 'px'; }
+    else { st.top = 'auto'; st.bottom = (vh - VIEW.y - VIEW.height + VIEW.height * 0.07) + 'px'; }
+    st.maxWidth = (VIEW.width * 0.9) + 'px';
+    st.fontSize = (20 * k) + 'px';
+    st.padding = (12 * k) + 'px ' + (22 * k) + 'px';
+    st.borderRadius = (12 * k) + 'px';
+  }
+  OneTake.view = function (v) {
+    VIEW = v && v.width ? v : null;
+    var all = document.querySelectorAll('.ot-caption');
+    for (var i = 0; i < all.length; i++) placeCaption(all[i]);
+  };
+
   P._setCaption = function (text, o) {
     if (!this._mounted) return;
     var c = this._part('_caption', 'div', 'ot-caption');
@@ -2168,6 +2238,7 @@
     var show = function () {
       c.textContent = text;
       c.classList.toggle('ot-top', !!(o && o.position === 'top'));
+      placeCaption(c);
       c.classList.add('ot-in');
       if (o && o.duration) self._captionTimer = setTimeout(function () { c.classList.remove('ot-in'); report('captionHide', {}); }, o.duration / self.opts.speed);
     };

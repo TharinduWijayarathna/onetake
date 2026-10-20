@@ -104,7 +104,7 @@
       if (self._aborted) throw new Error('OneTake: stopped');
       self._mount();
       self._current = info;
-      report('step', { index: index, name: name, site: info.site, action: !!ACTION_STEPS[name] });
+      report('step', { index: index, name: name, site: info.site, arg: info.arg, action: !!ACTION_STEPS[name] });
       if (self.opts.onStep) self.opts.onStep(name, args, info);
       return Promise.resolve(fn.call(self)).then(function (v) {
         report('stepDone', { index: index, name: name });
@@ -225,6 +225,32 @@
   /** Use the current frame as the video's thumbnail (recorder). */
   P.thumbnail = function () {
     return this._step('thumbnail', arguments, function () { report('thumbnail', {}); });
+  };
+
+  /* ---------- reusable steps ---------- */
+
+  /**
+   * Add your own chainable step made of other steps:
+   *   OneTake.define('signIn', function (take, email) {
+   *     take.type('label=Email', email).type('label=Password', 'demo1234').click('role=button[name="Sign in"]');
+   *   });
+   *   take.signIn('ada@example.com').caption('Signed in');
+   * The function runs immediately and queues its steps in place, so it can't read the page;
+   * use take.run() inside it for that.
+   */
+  OneTake.define = function (name, fn) {
+    if (typeof fn !== 'function') throw new Error('OneTake.define(' + name + ', fn): fn must be a function');
+    if (P[name] && !P[name]._defined) throw new Error('OneTake.define: "' + name + '" is a built-in step');
+    var m = function () { fn.apply(null, [this].concat([].slice.call(arguments))); return this; };
+    m._defined = true;
+    P[name] = m;
+    return OneTake;
+  };
+
+  /** Inline a group of steps: take.use(addContact, 'Priya'). Same as calling fn(take, 'Priya'). */
+  P.use = function (fn) {
+    fn.apply(null, [this].concat([].slice.call(arguments, 1)));
+    return this;
   };
 
   OneTake.defaults = DEFAULTS;

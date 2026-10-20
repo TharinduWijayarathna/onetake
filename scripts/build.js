@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Bundles src/*.js (in file-name order) into a single dependency-free UMD file: dist/onetake.js
+ * Bundles src/library/*.js (in file-name order) into a single dependency-free UMD file: dist/onetake.js
  *   node scripts/build.js
  */
 const fs = require('fs');
@@ -8,7 +8,7 @@ const path = require('path');
 
 const root = path.join(__dirname, '..');
 const pkg = require(path.join(root, 'package.json'));
-const srcDir = path.join(root, 'src');
+const srcDir = path.join(root, 'src', 'library');
 const parts = fs.readdirSync(srcDir).filter(f => f.endsWith('.js')).sort();
 
 const header = `/*!
@@ -16,7 +16,7 @@ const header = `/*!
  * Scripted, human-looking cursor, UI automation, highlights and camera zoom
  * for recording product demo videos in one take.
  * ${pkg.homepage || ''}
- * MIT License. Built from src/ by scripts/build.js — edit the sources, not this file.
+ * MIT License. Built from src/library/ by scripts/build.js — edit the sources, not this file.
  */
 (function (global, factory) {
   if (typeof module === 'object' && module.exports) module.exports = factory();
@@ -26,7 +26,7 @@ const header = `/*!
   'use strict';
 `;
 
-const body = parts.map(f => `\n  /* ---- src/${f} ---- */\n` + fs.readFileSync(path.join(srcDir, f), 'utf8').replace(/\s+$/, '') + '\n').join('');
+const body = parts.map(f => `\n  /* ---- src/library/${f} ---- */\n` + fs.readFileSync(path.join(srcDir, f), 'utf8').replace(/\s+$/, '') + '\n').join('');
 
 const footer = `
   OneTake.version = '${pkg.version}';

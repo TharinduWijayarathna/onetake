@@ -6,7 +6,7 @@
    * and pans follow the cursor like a camera operator would.
    *
    * Rendering:
-   *  - external (set by tools/record.js): the page is untouched; the recorder
+   *  - external (set by the recorder): the page is untouched; the recorder
    *    captures window.__otCamera's rectangle at full resolution (crisp text).
    *  - in-page: a CSS transform on <body>, for live screen recording.
    * ================================================================== */

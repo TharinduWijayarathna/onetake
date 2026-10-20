@@ -3,7 +3,7 @@
  * Scripted, human-looking cursor, UI automation, highlights and camera zoom
  * for recording product demo videos in one take.
  * https://github.com/TharinduWijayarathna/one-take
- * MIT License. Built from src/ by scripts/build.js — edit the sources, not this file.
+ * MIT License. Built from src/library/ by scripts/build.js — edit the sources, not this file.
  */
 (function (global, factory) {
   if (typeof module === 'object' && module.exports) module.exports = factory();
@@ -12,10 +12,10 @@
 })(typeof window !== 'undefined' ? window : this, function () {
   'use strict';
 
-  /* ---- src/00-core.js ---- */
+  /* ---- src/library/00-core.js ---- */
   /* ==================================================================
    * Core: options, helpers, the chainable step queue and the overlay layer.
-   * Feature modules (src/NN-*.js) extend OneTake.prototype and register
+   * Feature modules (src/library/NN-*.js) extend OneTake.prototype and register
    * CSS / lifecycle hooks below.
    * ================================================================== */
 
@@ -275,7 +275,7 @@
   OneTake.feature = feature;
   OneTake.ACTION_STEPS = ACTION_STEPS;
 
-  /* ---- src/10-targets.js ---- */
+  /* ---- src/library/10-targets.js ---- */
   /* ==================================================================
    * Targets: find the element a step acts on.
    *
@@ -652,7 +652,7 @@
   OneTake.findByText = function (text, root) { try { return textMatches(root || document, norm(text), 'exact')[0] || null; } catch (e) { return null; } };
   OneTake.findByLabel = function (text, root) { return labelMatches(root || document, norm(text))[0] || null; };
 
-  /* ---- src/20-cursor.js ---- */
+  /* ---- src/library/20-cursor.js ---- */
   /* ==================================================================
    * Cursor: a realistic pointer drawn on the overlay. It switches between
    * arrow, hand (over clickable things) and I-beam (over text fields).
@@ -755,7 +755,7 @@
     return this._step('hideCursor', arguments, function () { this._cursor.classList.remove('ot-visible'); return sleep(260); });
   };
 
-  /* ---- src/30-hover.js ---- */
+  /* ---- src/library/30-hover.js ---- */
   /* ==================================================================
    * Hover: pointer/mouse enter, leave, over, out and move events under the
    * cursor, and :hover / :active emulation (synthetic events can't trigger
@@ -869,7 +869,7 @@
     this._hoverSet = chain;
   };
 
-  /* ---- src/40-movement.js ---- */
+  /* ---- src/library/40-movement.js ---- */
   /* ==================================================================
    * Movement: curved, eased, human-like cursor paths (cubic Bézier with a
    * random bend, minimum-jerk speed profile, occasional overshoot).
@@ -979,7 +979,7 @@
     });
   };
 
-  /* ---- src/50-scroll.js ---- */
+  /* ---- src/library/50-scroll.js ---- */
   /* ==================================================================
    * Scroll: bring targets into view with a JS-driven smooth scroll. It is
    * frame-exact, so it also renders correctly in frame-by-frame recording,
@@ -1094,7 +1094,7 @@
     });
   };
 
-  /* ---- src/55-actionable.js ---- */
+  /* ---- src/library/55-actionable.js ---- */
   /* ==================================================================
    * Actionability: before a click, type, check, select, drag or upload,
    * wait until the element is
@@ -1212,7 +1212,7 @@
     return go();
   };
 
-  /* ---- src/57-settle.js ---- */
+  /* ---- src/library/57-settle.js ---- */
   /* ==================================================================
    * Settle: after an action (click, type, select, check, Enter, drag, upload)
    * wait until the app is idle: no fetch / XHR in flight and no DOM changes for
@@ -1300,7 +1300,7 @@
 
   OneTake.activity = ACTIVITY;
 
-  /* ---- src/58-expect.js ---- */
+  /* ---- src/library/58-expect.js ---- */
   /* ==================================================================
    * Assertions and waits, so a broken take fails loudly instead of
    * rendering the wrong video:
@@ -1419,7 +1419,7 @@
     });
   };
 
-  /* ---- src/60-click.js ---- */
+  /* ---- src/library/60-click.js ---- */
   /* ==================================================================
    * Click: a press animation and ripple, and either the real mouse (when the
    * recorder drives the browser: trusted events, native hover, focus, dropdowns)
@@ -1532,7 +1532,7 @@
   };
   P.uncheck = function (target, o) { return this.check(target, false, o); };
 
-  /* ---- src/70-input.js ---- */
+  /* ---- src/library/70-input.js ---- */
   /* ==================================================================
    * Input: human-like typing (variable rhythm, optional typos), key presses
    * and native <select>. Values go through the native setter plus
@@ -1770,7 +1770,7 @@
     return a || document.body;
   }
 
-  /* ---- src/75-drag-upload.js ---- */
+  /* ---- src/library/75-drag-upload.js ---- */
   /* ==================================================================
    * Drag and upload.
    *   take.drag('#card-3', '#done-column')          pointer drag; HTML5 drag-and-drop too
@@ -1905,7 +1905,7 @@
     });
   };
 
-  /* ---- src/80-sound.js ---- */
+  /* ---- src/library/80-sound.js ---- */
   /* ==================================================================
    * Sound: optional soft click and key sounds (WebAudio, no files),
    * for videos captured with a screen recorder.
@@ -1934,7 +1934,7 @@
 
   P._sound = function (kind) { if (this.opts.sound) tick(kind); };
 
-  /* ---- src/90-highlights.js ---- */
+  /* ---- src/library/90-highlights.js ---- */
   /* ==================================================================
    * Highlights: hand-drawn circle, box, underline and arrow strokes that
    * draw themselves like a pen, with optional callout labels. Shapes are a
@@ -2170,7 +2170,7 @@
 
   OneTake.shapes = SHAPES;
 
-  /* ---- src/91-spotlight.js ---- */
+  /* ---- src/library/91-spotlight.js ---- */
   /* ==================================================================
    * Spotlight & pulse: dim everything except one element, or ring it with
    * a pulsing outline. Registered as highlight shapes.
@@ -2204,7 +2204,7 @@
   P.spotlight = function (target, o) { return this.highlight(target, assign({}, o, { shape: 'spotlight' })); };
   P.pulse = function (target, o) { return this.highlight(target, assign({}, o, { shape: 'pulse' })); };
 
-  /* ---- src/92-captions.js ---- */
+  /* ---- src/library/92-captions.js ---- */
   /* ==================================================================
    * Captions: subtitle-style narration at the bottom (or top) of the screen.
    * ================================================================== */
@@ -2273,7 +2273,7 @@
     return this._step('hideCaption', arguments, function () { this._setCaption(null); return sleep(300 / this.opts.speed); });
   };
 
-  /* ---- src/95-camera.js ---- */
+  /* ---- src/library/95-camera.js ---- */
   /* ==================================================================
    * Camera: smooth Screen Studio-style zoom and pan.
    *
@@ -2282,7 +2282,7 @@
    * and pans follow the cursor like a camera operator would.
    *
    * Rendering:
-   *  - external (set by tools/record.js): the page is untouched; the recorder
+   *  - external (set by the recorder): the page is untouched; the recorder
    *    captures window.__otCamera's rectangle at full resolution (crisp text).
    *  - in-page: a CSS transform on <body>, for live screen recording.
    * ================================================================== */

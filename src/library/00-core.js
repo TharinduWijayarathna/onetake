@@ -1,6 +1,6 @@
   /* ==================================================================
    * Core: options, helpers, the chainable step queue and the overlay layer.
-   * Feature modules (src/NN-*.js) extend OneTake.prototype and register
+   * Feature modules (src/library/NN-*.js) extend OneTake.prototype and register
    * CSS / lifecycle hooks below.
    * ================================================================== */
 

@@ -70,11 +70,18 @@
   }
 
   /** querySelectorAll that falls back to searching inside shadow roots when the light DOM has no match. */
-  function deepAll(scope, selector) {
+  function deepAll(scope, selector, union) {
     var found = Array.prototype.slice.call(scope.querySelectorAll(selector));
-    if (found.length) return found;
+    if (found.length && !union) return found;
     var roots = shadowRoots(scope);
     for (var i = 1; i < roots.length; i++) found = found.concat(Array.prototype.slice.call(roots[i].querySelectorAll(selector)));
+    return found;
+  }
+
+  /** Text, label and role targets look everywhere: the light DOM, every open shadow root, and the scope element itself. */
+  function deepAllWithSelf(scope, selector) {
+    var found = deepAll(scope, selector, true);
+    if (scope.nodeType === 1 && scope.matches(selector)) found.unshift(scope);
     return found;
   }
 
@@ -145,7 +152,7 @@
   function textMatches(scope, wanted, mode) {
     var wantedSquashed = squash(wanted);
     function collect(selector) {
-      var nodes = deepAll(scope, selector), exact = [], partial = [];
+      var nodes = deepAllWithSelf(scope, selector), exact = [], partial = [];
       for (var i = 0; i < nodes.length; i++) {
         var el = nodes[i];
         if (inOverlay(el)) continue;
@@ -177,7 +184,7 @@
 
   function labelMatches(scope, wanted) {
     var exact = [], prefix = [];
-    var labels = deepAll(scope, 'label');
+    var labels = deepAll(scope, 'label', true);
     for (var i = 0; i < labels.length; i++) {
       var l = labels[i], lt = labelText(l);
       if (lt !== wanted && lt.indexOf(wanted) !== 0) continue;
@@ -185,7 +192,7 @@
         l.querySelector('input,select,textarea');
       if (ctl) (lt === wanted ? exact : prefix).push(ctl);
     }
-    var ctls = deepAll(scope, 'input,select,textarea,[contenteditable],[role="textbox"],[role="combobox"]');
+    var ctls = deepAll(scope, 'input,select,textarea,[contenteditable],[role="textbox"],[role="combobox"]', true);
     for (var j = 0; j < ctls.length; j++) {
       var c = ctls[j];
       var names = [c.getAttribute('aria-label'), c.getAttribute('placeholder'), c.getAttribute('name'), labelledBy(c)];
@@ -256,7 +263,7 @@
     var m = spec.match(/^([a-z]+)(?:\[name(\*?)=(["'])(.*)\3\])?$/i);
     if (!m) throw new Error('Bad role target "role=' + spec + '". Use role=button or role=button[name="Save"].');
     var role = m[1].toLowerCase(), contains = m[2] === '*', name = m[4] != null ? norm(m[4]) : null;
-    var nodes = deepAll(scope, ROLE_SELECTORS[role] || '[role="' + role + '"]');
+    var nodes = deepAllWithSelf(scope, ROLE_SELECTORS[role] || '[role="' + role + '"]');
     return nodes.filter(function (el) {
       if (inOverlay(el) || roleOf(el) !== role || !isVisible(el)) return false;
       if (name == null) return true;

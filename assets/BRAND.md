@@ -16,8 +16,7 @@ being recorded. **The wordmark** is "OneTake" set in Inter Display ExtraBold, wi
 | `icon-512.png` | The mark as a PNG, for places that don't take SVG |
 | `social-preview.png` | 1280×640 GitHub social preview (repo Settings → Social preview) |
 
-All of them are generated: edit `scripts/brand.py` (logos, icon) or `scripts/social-preview.html` (the preview), then run
-`python3 scripts/brand.py`. The wordmark is outlined to paths, so it looks the same without the font installed.
+The wordmark is outlined to paths, so the logos look the same without the font installed.
 
 ## Colours
 

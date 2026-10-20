@@ -259,13 +259,18 @@
     return norm(el.innerText || el.textContent || el.getAttribute('title'));
   }
 
+  /** Close relatives a role target also accepts: role=checkbox finds switches, role=dialog alert dialogs… */
+  var ROLE_ALIASES = { checkbox: 'switch', dialog: 'alertdialog', table: 'grid', cell: 'gridcell' };
+
   function roleMatches(scope, spec) {
     var m = spec.match(/^([a-z]+)(?:\[name(\*?)=(["'])(.*)\3\])?$/i);
     if (!m) throw new Error('Bad role target "role=' + spec + '". Use role=button or role=button[name="Save"].');
     var role = m[1].toLowerCase(), contains = m[2] === '*', name = m[4] != null ? norm(m[4]) : null;
     var nodes = deepAllWithSelf(scope, ROLE_SELECTORS[role] || '[role="' + role + '"]');
     return nodes.filter(function (el) {
-      if (inOverlay(el) || roleOf(el) !== role || !isVisible(el)) return false;
+      if (inOverlay(el) || !isVisible(el)) return false;
+      var r = roleOf(el);
+      if (r !== role && ROLE_ALIASES[role] !== r) return false;
       if (name == null) return true;
       var an = accessibleName(el);
       return contains ? an.indexOf(name) !== -1 : an === name;

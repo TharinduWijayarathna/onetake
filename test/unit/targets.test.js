@@ -13,6 +13,7 @@ test.before(async () => {
     <label for="em">Email address</label><input id="em">
     <input placeholder="Search people"> <input id="flt" aria-label="Filter">
     <div role="tab" aria-selected="true">Overview</div><div role="tab">Billing</div>
+    <div role="switch" aria-checked="false" aria-label="Dark mode" tabindex="0">◐</div>
     <span style="display:none">Hidden text</span>
     <x-box></x-box>
     <iframe id="fr" srcdoc="<button>Inside</button>"></iframe>
@@ -54,6 +55,7 @@ test('role= with accessible names', async () => {
   assert.equal(await q('role=tab[name="Billing"]'), 'DIV:Billing');
   assert.equal(await q('role=button[name="Close dialog"]'), 'b2');
   assert.equal(await q('role=button[name*="Shadow"]'), 'BUTTON:Shadow button');
+  assert.equal(await q('role=checkbox[name="Dark mode"]'), 'DIV:◐');      // switches count as checkboxes
 });
 
 test('hidden elements are not text matches', async () => {

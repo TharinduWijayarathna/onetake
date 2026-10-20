@@ -5,7 +5,11 @@
  *   npm install && npx playwright install chromium
  *   node tools/record.js --url http://localhost:3000 --script my-tour.js
  *
- * Captures Playwright's live screencast (~25 fps) and converts it to MP4 when ffmpeg is available.
+ * Capture modes
+ *   frame-by-frame (default)  the page runs on a virtual clock stepped exactly 1/fps per
+ *                             frame, so the video is perfectly smooth at any fps/resolution.
+ *                             Rendering takes longer than real time. No audio.
+ *   --realtime                Playwright's live screencast (~25 fps, plays in real time).
  *
  * Options
  *   --url <url|file>      page to open
@@ -14,10 +18,14 @@
  *   --name <name>         output file name without extension (default demo-<timestamp>)
  *   --width / --height    viewport in CSS px (default 1920 x 1080)
  *   --scale <n>           device pixel ratio, e.g. 2 → 3840x2160 from a 1920x1080 layout (default 1)
+ *   --fps <n>             frames per second in frame mode (default 60)
+ *   --format jpeg|png     frame capture format (default jpeg q95; png is lossless but slower)
  *   --crf <n>             x264 quality, lower = better (default 16)
+ *   --seed <n>            fix Math.random so every take is identical
  *   --speed <n>           OneTake speed multiplier (default 1)
  *   --storage <file>      Playwright storageState JSON to start logged in
  *   --lead <ms> / --tail <ms>   still time before / after the script (default 800 / 1200)
+ *   --max <seconds>       safety limit on video length in frame mode (default 900)
  *   --headed              show the browser window
  *
  * A script file is plain JavaScript run inside the page with a ready `take` in scope:
@@ -79,7 +87,7 @@ const job = {
   if (process.env.CHROMIUM_PATH) launch.executablePath = process.env.CHROMIUM_PATH;
   const browser = await chromium.launch(launch);
   try {
-    const record = require('./lib/realtime');
+    const record = args.realtime ? require('./lib/realtime') : require('./lib/frames');
     await record(browser, job);
   } finally {
     await browser.close();

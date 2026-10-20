@@ -1,0 +1,16 @@
+# OneTake
+
+> Script product demo videos for web apps: a human-like cursor drives the real UI, a smooth camera zooms on what matters, hand-drawn highlights and captions guide the viewer, and a frame-by-frame recorder renders a 60 fps MP4.
+
+## For AI agents
+
+- [AGENTS.md](AGENTS.md): the full workflow for making a demo video of a project (pick a scenario from its browser tests, sign in, map the DOM, write one script per page, rehearse, render), API cheat sheet, recorder flags and gotchas.
+- [skills/onetake-demo-video/SKILL.md](skills/onetake-demo-video/SKILL.md): the same workflow as a Claude skill.
+- [templates/demo-kit/](templates/demo-kit/): starter kit to copy next to a project (record.sh + page script).
+
+## Reference
+
+- [README.md](README.md): features, API, options, recorder and limitations.
+- [dist/onetake.js](dist/onetake.js): the bundled library (UMD, no dependencies).
+- [tools/record.js](tools/record.js): the recorder CLI. [tools/save-login.js](tools/save-login.js): save a signed-in session.
+- [examples/tour.js](examples/tour.js): a complete tour using every feature, for [examples/demo.html](examples/demo.html).

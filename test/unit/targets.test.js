@@ -30,6 +30,7 @@ const q = t => page.evaluate(t => { try { const el = OneTake.query(t); return el
 test('text= is exact and prefers clickable elements', async () => {
   assert.equal(await q('text=Save'), 'b1');
   assert.equal(await q('text*=Save drafts'), 'A:Save drafts');
+  assert.equal(await q('text="Save"'), 'b1');                    // quotes are fine
 });
 
 test('text= refuses ambiguous matches and says how to narrow them', async () => {

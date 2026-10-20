@@ -17,11 +17,10 @@ dist/onetake.js       the built library (committed, so it works without a build 
 types/                TypeScript types
 scripts/build.js      src/library/ → dist/onetake.js
 docs/                 documentation
-examples/             a sample CRM and its tour
 templates/demo-kit/   the starter kit for a project
 skills/               the Claude skill (with AGENTS.md, CLAUDE.md and llms.txt at the root)
 test/unit/            node:test unit tests
-test/e2e/             smoke, compatibility, recorder and visual tests
+test/e2e/             compatibility, recorder and visual tests
 test/fixtures/        small apps the tests drive · test/golden/ reference frames · test/helpers/
 assets/               logo, icon, social preview, brand guide
 ```
@@ -34,7 +33,7 @@ assets/               logo, icon, social preview, brand guide
 
 | | | |
 |---|---|---|
-| `npm test` | build, unit tests, smoke test | ~20 s |
+| `npm test` | build + unit tests | ~15 s |
 | `npm run test:compat` | 12 fixtures × 2 input modes | ~1 min |
 | `npm run test:record` | recorder and renderer end to end | ~2 min |
 | `npm run test:visual` | golden frames | ~30 s |

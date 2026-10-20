@@ -202,7 +202,7 @@ v1-style `--script a.js --script b.js` (one file per page) still works.
 
 `src/library/NN-*.js` are the library modules (bundled to `dist/onetake.js` by `npm run build`).
 `src/recorder/` holds the recorder, CLI and renderer (entry: `bin/onetake.js`), and `types/` the TypeScript types. `npm test`
-runs the build, the unit tests and the smoke test; `npm run test:compat`,
+runs the build and the unit tests; `npm run test:compat`,
 `npm run test:record` and `npm run test:visual` run the rest. Edit `src/library/`, never `dist/` by
 hand. Keep `docs/`, this file, `llms.txt` and `skills/` in step with the code. See
 [docs/contributing.md](docs/contributing.md).

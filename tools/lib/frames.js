@@ -21,7 +21,8 @@ module.exports = async function recordFrames(browser, job) {
     reducedMotion: 'no-preference'
   });
   const seedLine = opt.seed != null ? `window.__OT_SEED = ${opt.seed};\n` : '';
-  await context.addInitScript({ content: seedLine + clockLib });
+  // zoom() is rendered by the recorder (re-rasterised, crisp) instead of a CSS transform
+  await context.addInitScript({ content: seedLine + "window.__OT_CAMERA = 'external';\n" + clockLib });
   const page = await context.newPage();
   attachLogging(page);
   const cdp = await context.newCDPSession(page);
@@ -41,10 +42,14 @@ module.exports = async function recordFrames(browser, job) {
   let frames = 0, lastLog = Date.now();
   const t0 = Date.now();
 
-  async function capture() {
+  async function capture(cam) {
     const params = opt.format === 'png'
       ? { format: 'png', fromSurface: true, optimizeForSpeed: true }
       : { format: 'jpeg', quality: 95, fromSurface: true, optimizeForSpeed: true };
+    if (cam && cam.scale > 1.0005) {
+      // Camera zoom: capture just the camera's rectangle, rendered at a higher scale (sharp, not upscaled pixels).
+      params.clip = { x: cam.x + cam.sx, y: cam.y + cam.sy, width: cam.width, height: cam.height, scale: cam.scale };
+    }
     const shot = await cdp.send('Page.captureScreenshot', params);
     const buf = Buffer.from(shot.data, 'base64');
     if (!ff.stdin.write(buf)) await new Promise(r => ff.stdin.once('drain', r));
@@ -62,13 +67,17 @@ module.exports = async function recordFrames(browser, job) {
     try {
       status = await page.evaluate(async d => {
         await window.__otClock.tick(d);
-        return { done: window.__otDone, error: window.__otError, pos: window.__otTake ? window.__otTake.pos : null };
+        const c = window.__otCamera;
+        return {
+          done: window.__otDone, error: window.__otError, pos: window.__otTake ? window.__otTake.pos : null,
+          cam: c ? { x: c.x, y: c.y, width: c.width, height: c.height, scale: c.scale, sx: scrollX, sy: scrollY } : null
+        };
       }, dt);
     } catch (e) {
       if (isNavError(e)) return { nav: true };
       throw e;
     }
-    await capture();
+    await capture(status.cam);
     return status;
   }
 

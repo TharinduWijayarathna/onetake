@@ -1,14 +1,13 @@
-#!/usr/bin/env node
 /**
  * Save a logged-in browser session for the recorder (Playwright storageState).
  *
  * Sign in by hand once:
- *   node tools/save-login.js --url http://localhost/login --until /dashboard --out demo/auth.json
+ *   onetake login --url http://localhost/login --until /dashboard --out demo/auth.json
  *
  * Check whether a saved session still works (exit 0 = logged in, 1 = not):
- *   node tools/save-login.js --check http://localhost/dashboard --login /login --out demo/auth.json
+ *   onetake login --check http://localhost/dashboard --login /login --out demo/auth.json
  *
- * Then record with:  node tools/record.js ... --storage demo/auth.json
+ * Then record with:  onetake record --storage demo/auth.json
  *
  * Options
  *   --url <url>        login page to open (sign-in mode)
@@ -20,7 +19,7 @@
  */
 const fs = require('fs');
 const path = require('path');
-const { fail, loadPlaywright } = require('./lib/common');
+const { fail, loadPlaywright } = require('./util');
 
 const args = {};
 for (let i = 2; i < process.argv.length; i++) {
@@ -42,7 +41,7 @@ const launch = process.env.CHROMIUM_PATH ? { executablePath: process.env.CHROMIU
     process.exit(loggedOut ? 1 : 0);
   }
 
-  if (!args.url) fail('Usage: node tools/save-login.js --url <login page> [--until <regex>] [--out auth.json]');
+  if (!args.url) fail('Usage: onetake login --url <login page> [--until <regex>] [--out auth.json]');
   const browser = await chromium.launch({ ...launch, headless: false });
   const context = await browser.newContext({ viewport: { width: +(args.width || 1440), height: +(args.height || 900) } });
   const page = await context.newPage();

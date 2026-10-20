@@ -1,15 +1,15 @@
 /*
- * Frame-by-frame capture: the page runs on a virtual clock (tools/virtual-time.js) that is
+ * Frame-by-frame capture: the page runs on a virtual clock (clock.js) that is
  * advanced exactly 1/fps per frame; each frame is screenshotted and streamed into ffmpeg.
  * Perfectly smooth at any fps / resolution, and identical from take to take.
  */
 const fs = require('fs');
 const path = require('path');
 const { spawn } = require('child_process');
-const { attachLogging, isNavError } = require('./common');
+const { attachLogging, isNavError } = require('./util');
 const { runSession, contextOptions, initGlobals, saveFailure } = require('./session');
 
-const clockLib = fs.readFileSync(path.join(__dirname, '..', 'virtual-time.js'), 'utf8');
+const clockLib = fs.readFileSync(path.join(__dirname, 'clock.js'), 'utf8');
 const even = n => Math.round(n / 2) * 2;
 
 /**

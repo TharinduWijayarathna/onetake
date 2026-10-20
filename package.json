@@ -13,11 +13,12 @@
     "./package.json": "./package.json"
   },
   "bin": {
-    "onetake": "tools/cli.js"
+    "onetake": "bin/onetake.js"
   },
   "files": [
+    "bin/",
     "dist/",
-    "tools/",
+    "src/recorder/",
     "types/",
     "templates/",
     "skills/",
@@ -30,15 +31,15 @@
   },
   "scripts": {
     "build": "node scripts/build.js",
-    "test": "node scripts/build.js && node --test test/unit/*.test.js && node test/smoke.js",
+    "test": "node scripts/build.js && node --test test/unit/*.test.js && node test/e2e/smoke.js",
     "test:unit": "node --test test/unit/*.test.js",
-    "test:compat": "node scripts/build.js && node test/compat.js",
-    "test:record": "node scripts/build.js && node test/record.js",
-    "test:visual": "node scripts/build.js && node test/visual.js",
-    "test:all": "npm test && node test/compat.js && node test/record.js",
-    "example": "node tools/cli.js record examples/tour.js --url examples/demo.html --width 1280 --height 760 --name example",
-    "record": "node tools/cli.js record",
-    "check": "node tools/cli.js check"
+    "test:compat": "node scripts/build.js && node test/e2e/compat.js",
+    "test:record": "node scripts/build.js && node test/e2e/record.js",
+    "test:visual": "node scripts/build.js && node test/e2e/visual.js",
+    "test:all": "npm test && node test/e2e/compat.js && node test/e2e/record.js",
+    "example": "node bin/onetake.js record examples/tour.js --url examples/demo.html --width 1280 --height 760 --name example",
+    "record": "node bin/onetake.js record",
+    "check": "node bin/onetake.js check"
   },
   "keywords": [
     "demo",

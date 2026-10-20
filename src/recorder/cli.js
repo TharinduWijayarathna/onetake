@@ -1,4 +1,3 @@
-#!/usr/bin/env node
 /**
  * onetake: record product demo videos from a OneTake tour script.
  *
@@ -13,8 +12,8 @@
 const fs = require('fs');
 const path = require('path');
 const { spawnSync } = require('child_process');
-const { fail, loadPlaywright, findFfmpeg, ROOT } = require('./lib/common');
-const { parseArgs, resolveConfig } = require('./lib/config');
+const { fail, loadPlaywright, findFfmpeg } = require('./util');
+const { parseArgs, resolveConfig } = require('./config');
 
 const HELP = `
 OneTake: scripted product demo videos
@@ -104,7 +103,7 @@ function init(dir) {
 }
 
 function login(argv) {
-  const r = spawnSync(process.execPath, [path.join(__dirname, 'save-login.js'), ...argv], { stdio: 'inherit' });
+  const r = spawnSync(process.execPath, [path.join(__dirname, 'login.js'), ...argv], { stdio: 'inherit' });
   process.exit(r.status == null ? 1 : r.status);
 }
 
@@ -132,7 +131,7 @@ function reportError(result) {
 }
 
 async function check(cfg, browser) {
-  const { checkTour } = require('./lib/realtime');
+  const { checkTour } = require('./realtime');
   const base = baseName(Object.assign({}, cfg, { name: 'check' }));   // <out>/check.failure.png
   const quick = Object.assign({}, cfg, { lead: 0, tail: 0 });
   console.log(`▶ checking ${cfg.tour.map(t => path.relative(process.cwd(), t)).join(', ')} on ${cfg.url}`);
@@ -144,14 +143,14 @@ async function check(cfg, browser) {
 }
 
 async function record(cfg, browser) {
-  const { render, needsRender } = require('./lib/render');
+  const { render, needsRender } = require('./render');
   const ffmpeg = findFfmpeg();
   const base = baseName(cfg);
   const t0 = Date.now();
   let result, raw;
   console.log(`▶ recording ${cfg.tour.map(t => path.relative(process.cwd(), t)).join(', ')} on ${cfg.url}`);
   if (cfg.mode === 'realtime') {
-    const { recordRealtime } = require('./lib/realtime');
+    const { recordRealtime } = require('./realtime');
     raw = base + '.raw.webm';
     result = await recordRealtime(browser, cfg, { file: raw, base });
     result.size = { width: Math.round(cfg.viewport.width * cfg.scale / 2) * 2, height: Math.round(cfg.viewport.height * cfg.scale / 2) * 2 };
@@ -164,7 +163,7 @@ async function record(cfg, browser) {
     }
   } else {
     if (!ffmpeg) fail('Frame-by-frame mode needs ffmpeg. Run: npm install (installs ffmpeg-static), or install ffmpeg (macOS: brew install ffmpeg)');
-    const recordFrames = require('./lib/frames');
+    const recordFrames = require('./frames');
     raw = base + '.raw.mp4';
     const finish = needsRender(cfg);
     result = await recordFrames(browser, cfg, ffmpeg, { file: raw, crf: finish ? Math.min(10, cfg.crf) : cfg.crf, preset: finish ? 'fast' : 'medium' });
@@ -223,6 +222,9 @@ async function main(argv) {
   if (!ok) process.exitCode = 1;
 }
 
-if (require.main === module) main(process.argv.slice(2)).catch(e => fail(e.stack || e.message));
+/** Entry point for bin/onetake.js. */
+function run(argv = process.argv.slice(2)) {
+  main(argv).catch(e => fail(e.stack || e.message));
+}
 
-module.exports = { main, HELP, ROOT };
+module.exports = { main, run };

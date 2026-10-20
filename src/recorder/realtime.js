@@ -7,7 +7,7 @@
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
-const { attachLogging, isNavError } = require('./common');
+const { attachLogging, isNavError } = require('./util');
 const { runSession, contextOptions, initGlobals, saveFailure } = require('./session');
 
 const sleep = ms => new Promise(r => setTimeout(r, ms));

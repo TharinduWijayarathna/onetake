@@ -168,4 +168,4 @@ function resolveConfig({ flags = {}, positional = [], meta = {} }, cwd = process
   return cfg;
 }
 
-module.exports = { DEFAULTS, FRAME_DEFAULTS, parseArgs, resolveConfig, findConfig };
+module.exports = { DEFAULTS, parseArgs, resolveConfig };

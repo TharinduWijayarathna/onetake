@@ -14,7 +14,7 @@
  */
 const fs = require('fs');
 const path = require('path');
-const { readLibrary, isNavError } = require('./common');
+const { readLibrary, isNavError } = require('./util');
 
 const MIME = {
   png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', gif: 'image/gif', webp: 'image/webp', svg: 'image/svg+xml',
@@ -279,4 +279,4 @@ function pageStatus() {
   };
 }
 
-module.exports = { runSession, contextOptions, initGlobals, saveFailure, pageStatus, loadTour, isNavError };
+module.exports = { runSession, contextOptions, initGlobals, saveFailure };

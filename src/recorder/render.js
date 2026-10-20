@@ -278,4 +278,4 @@ function needsRender(cfg) {
   return !!(cfg.frame || cfg.intro || cfg.outro || cfg.sound || cfg.music || cfg.mode === 'realtime');
 }
 
-module.exports = { render, needsRender, captionCues, chapterList, toSrt, toVtt, ffmeta, youtube, frameLayout, BACKGROUNDS, durationOf };
+module.exports = { render, needsRender, captionCues, chapterList, toSrt, toVtt, ffmeta, youtube, frameLayout };

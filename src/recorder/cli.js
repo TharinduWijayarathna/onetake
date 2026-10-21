@@ -23,6 +23,7 @@ Usage
   onetake check  [tour.js…] [options]   dry run: play the tour (no video), stop at the first broken step
   onetake record [tour.js…] [options]   render the video
   onetake login  --url <login page> [--until <regex>] [--out auth.json]
+  onetake mcp                           MCP server for AI agents (inspect pages, test targets, check, record)
   onetake help
 
 Page and tour
@@ -201,6 +202,7 @@ function watchFiles(cfg, run) {
 
 async function main(argv) {
   if (argv[0] === 'login') return login(argv.slice(1));     // login has its own options (--check, --until, …)
+  if (argv[0] === 'mcp') return require('./mcp').serve();    // MCP server for AI agents, over stdio
   let parsed;
   try { parsed = parseArgs(argv); } catch (e) { fail(e.message); }
   const cmd = parsed.command || 'help';

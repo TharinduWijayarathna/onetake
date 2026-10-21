@@ -14,6 +14,7 @@ maps the pages, writes the tour, checks it, renders it, and looks at the result.
 | [`llms.txt`](../llms.txt) | A map of the repo for tools that read `llms.txt`. |
 | [`templates/demo-kit/`](../templates/demo-kit/) | The kit the agent copies next to your project. |
 | `docs/` | The full reference, when it needs details. |
+| [`onetake mcp`](mcp.md) | An MCP server: the agent inspects your pages, tests targets, checks and renders through tools. The best option for Claude Desktop and other apps without a terminal. |
 
 ## How to ask
 

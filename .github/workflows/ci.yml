@@ -26,6 +26,8 @@ jobs:
         run: node test/e2e/compat.js
       - name: Recorder integration (frames, realtime, render outputs)
         run: node test/e2e/record.js
+      - name: MCP server
+        run: node test/e2e/mcp.js
       - name: Types
         run: npx -y -p typescript@5.6.3 tsc -p test/types
       - name: "Visual regression (informational: fonts differ between machines)"

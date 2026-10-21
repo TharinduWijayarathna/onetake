@@ -36,8 +36,9 @@
     "test:compat": "node scripts/build.js && node test/e2e/compat.js",
     "test:record": "node scripts/build.js && node test/e2e/record.js",
     "test:visual": "node scripts/build.js && node test/e2e/visual.js",
-    "test:all": "npm test && node test/e2e/compat.js && node test/e2e/record.js",
-    "docs": "node scripts/build-site.js"
+    "test:all": "npm test && node test/e2e/compat.js && node test/e2e/record.js && node test/e2e/mcp.js",
+    "docs": "node scripts/build-site.js",
+    "test:mcp": "node scripts/build.js && node test/e2e/mcp.js"
   },
   "keywords": [
     "demo",

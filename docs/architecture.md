@@ -93,6 +93,7 @@ carries over page loads.
 | `audio.js` | Synthesised click and key sounds, mixed in Node into a WAV. |
 | `clock.js` | The virtual clock (above). |
 | `login.js` | `onetake login`. |
+| `mcp.js` | `onetake mcp`: the MCP server (JSON-RPC over stdio) with the page inspector. |
 | `util.js` | Finding Playwright, ffmpeg and the built library. |
 
 ### Why identical takes

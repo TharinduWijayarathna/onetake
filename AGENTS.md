@@ -65,7 +65,10 @@ For every control the scenario touches, note:
 - the **components** worth zooming on (a form, a card, a table);
 - where page loads happen. They're fine, just know where they are.
 
-`OneTake.query('…')` in the browser console tells you whether a target is unique.
+`OneTake.query('…')` in the browser console tells you whether a target is unique. If the `onetake` MCP
+server is connected ([docs/mcp.md](docs/mcp.md)), use it instead: `open_page { cwd: <kit> }` and `inspect_page`
+list every control with a target that works, `test_target` checks yours, `run_steps` moves through the
+flow, and `check_tour` / `record_video` replace the commands below.
 
 ### 4. Write the tour
 

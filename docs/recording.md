@@ -8,6 +8,7 @@ onetake init                    # onetake.config.js + tour.js
 onetake check                   # dry run, fast, no video
 onetake record                  # the video
 onetake login --url http://localhost:3000/login --until /dashboard --out auth.json
+onetake mcp                     # MCP server for AI agents (see MCP server)
 onetake help
 ```
 

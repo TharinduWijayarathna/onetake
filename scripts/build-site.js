@@ -26,7 +26,7 @@ const NAV = [
   ['Getting started', [['getting-started', 'Installation & first video'], ['writing-tours', 'Writing tours']]],
   ['The basics', [['targets', 'Targets'], ['waiting-and-assertions', 'Waiting & assertions'], ['camera-and-highlights', 'Camera, highlights & captions']]],
   ['The recorder', [['recording', 'Recording'], ['output', 'Output']]],
-  ['Guides', [['recipes', 'Recipes'], ['ai-agents', 'AI agents'], ['troubleshooting', 'Troubleshooting']]],
+  ['Guides', [['recipes', 'Recipes'], ['ai-agents', 'AI agents'], ['mcp', 'MCP server'], ['troubleshooting', 'Troubleshooting']]],
   ['Reference', [['api', 'API reference'], ['architecture', 'Architecture'], ['contributing', 'Contributing']]]
 ];
 

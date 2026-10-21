@@ -21,7 +21,7 @@
 - [docs/output.md](docs/output.md): frame and backgrounds, intro/outro, sound and music, subtitles, chapters, thumbnails, formats, --aspect.
 - [docs/recipes.md](docs/recipes.md): custom dropdowns, comboboxes, date pickers, modals, uploads, drag and drop, tables, rich text, shortcuts, demo data, --now, languages, CI.
 - [docs/troubleshooting.md](docs/troubleshooting.md): every error message and fix.
-- [docs/migrating-from-v1.md](docs/migrating-from-v1.md), [docs/architecture.md](docs/architecture.md), [docs/contributing.md](docs/contributing.md).
+- [docs/architecture.md](docs/architecture.md), [docs/contributing.md](docs/contributing.md).
 
 ## Code
 

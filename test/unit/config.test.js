@@ -16,7 +16,7 @@ test('parses commands, positionals, values, booleans and negations', () => {
   assert.deepEqual(a.flags.formats, ['webm', 'gif']);
 });
 
-test('v1 flags still work', () => {
+test('--script, --width/--height, --format and --realtime', () => {
   const a = parseArgs(['record', '--script', 'a.js', '--script', 'b.js', '--width', '1280', '--height', '720', '--format', 'png', '--realtime']);
   assert.deepEqual(a.flags.tour, ['a.js', 'b.js']);
   assert.deepEqual(a.flags.viewport, { width: 1280, height: 720 });

@@ -71,7 +71,7 @@ Consequences:
 - Code outside the chain runs again on every page. Keep it side-effect free, or put it in a
   `run()` step.
 - `take.set({...})` options carry over, even when the step that set them is skipped.
-- `--script a.js --script b.js` (one file per page, as in v1) still works. Each file runs on
+- You can also split a tour into files: `--script a.js --script b.js`. Each file runs on
   the page the previous one left.
 
 ## Telling a story

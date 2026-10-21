@@ -30,7 +30,6 @@ once and you get the same video on every take.
 | [Recipes](recipes.md) | Logins, custom dropdowns, date pickers, uploads, drag and drop, tables, seeding data, translations, CI |
 | [AI agents](ai-agents.md) | Let Claude, Codex, Cursor or Copilot make the video for a project |
 | [Troubleshooting](troubleshooting.md) | Every error message, and what to do about it |
-| [Migrating from v1](migrating-from-v1.md) | What changed in 2.0 |
 
 ## Inside OneTake
 

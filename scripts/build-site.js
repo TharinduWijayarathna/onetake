@@ -1,10 +1,11 @@
 #!/usr/bin/env node
 /**
- * Builds the documentation website from docs/*.md: one self-contained HTML file with a
+ * Builds the documentation website from docs/*.md: a page per doc, with a
  * sidebar, search, "on this page" contents, highlighted code and light/dark themes.
  *
- *   node scripts/build-site.js              → site/index.html   (GitHub Pages; see .github/workflows/pages.yml)
- *   node scripts/build-site.js --fragment   → site/fragment.html (no <html>/<head>, for embedding)
+ *   node scripts/build-site.js              → site/: one folder per page (site/mcp/index.html …), md/, llms.txt
+ *                                             (GitHub Pages; see .github/workflows/pages.yml)
+ *   node scripts/build-site.js --fragment   → site/fragment.html: every page in one file, for previews
  *
  * No dependencies: the Markdown subset used in docs/ (headings, paragraphs, lists, tables,
  * fenced code, quotes, inline code, bold, italics, links) is converted here.
@@ -17,6 +18,7 @@ const DOCS = path.join(ROOT, 'docs');
 const OUT = path.join(ROOT, 'site');
 const pkg = require(path.join(ROOT, 'package.json'));
 const REPO = 'https://github.com/TharinduWijayarathna/onetake';
+const SITE = 'https://tharinduwijayarathna.github.io/onetake/';
 const fragment = process.argv.includes('--fragment');
 
 /* ---------- navigation ---------- */
@@ -238,7 +240,7 @@ function build() {
   for (const [group, items] of NAV) for (const [id, label] of items) {
     const md = readPage(id);
     const { html, toc, title } = convert(md, id);
-    pages.push({ id, label, group, title: title || label, html, toc });
+    pages.push({ id, label, group, title: title || label, html, toc, md });
   }
   // README links point at docs/*.md from the repo root; inside the intro they're page links.
   pages[0].html = pages[0].html.replace(/href="https:\/\/github\.com\/TharinduWijayarathna\/onetake\/blob\/main\/docs\/([\w-]+)\.md(?:#([\w-]+))?"/g,
@@ -246,17 +248,33 @@ function build() {
 
   const search = [];
   for (const p of pages) {
-    search.push({ t: p.title, p: p.id, id: p.id, g: p.group });
-    for (const h of p.toc) search.push({ t: h.text, p: p.id, id: h.id, g: p.title });
+    search.push({ t: p.title, id: p.id, g: p.group });
+    for (const h of p.toc) search.push({ t: h.text, id: h.id, g: p.title });
   }
+  const icon = fs.readFileSync(path.join(ROOT, 'assets', 'icon.svg'), 'utf8').replace(/<\?xml[^>]*>/, '').replace(/<title>.*?<\/title>/, '')
+    .replace(/width="64" height="64"/, 'width="28" height="28"').replace(/id="ot-g"/, 'id="ot-site-g"').replace(/url\(#ot-g\)/, 'url(#ot-site-g)');
 
-  const nav = NAV.map(([group, items]) => `<div class="nav-group"><h4>${esc(group)}</h4><ul>${items.map(([id, label]) =>
-    `<li><a href="#${id}" data-page="${id}">${esc(label)}</a></li>`).join('')}</ul></div>`).join('');
+  /* Links are written as "#page" / "#page.section"; the multi-page site turns them into real paths. */
+  const multi = !fragment;
+  const pathFor = (from, target) => {
+    if (!multi) return '#' + target;
+    const [pg, ...rest] = target.split('.');
+    const sec = rest.join('.');
+    const up = from === 'introduction' ? '' : '../';
+    if (pg === from) return '#' + (sec || 'top');
+    return (up + (pg === 'introduction' ? '' : pg + '/') || './') + (sec ? '#' + sec : '');
+  };
+  const localize = (html, from) => !multi ? html : html
+    .replace(/href="#([\w-]+(?:\.[^"]*)?)"/g, (m, t) => `href="${esc(pathFor(from, t))}"`)
+    .replace(/id="([\w-]+)\.([^"]+)"/g, (m, pg, sec) => (pg === from ? `id="${sec}"` : m));
 
-  const articles = pages.map((p, n) => {
+  const nav = from => NAV.map(([group, items]) => `<div class="nav-group"><h4>${esc(group)}</h4><ul>${items.map(([id, label]) =>
+    `<li><a href="${esc(multi ? pathFor(from, id) : '#' + id)}" data-page="${id}"${multi && id === from ? ' class="active" aria-current="page"' : ''}>${esc(label)}</a></li>`).join('')}</ul></div>`).join('');
+
+  const article = (p, n, from) => {
     const prev = pages[n - 1], next = pages[n + 1];
     const toc = p.toc.filter(h => h.level === 2 || h.level === 3);
-    return `<article class="page" id="page-${p.id}" data-page="${p.id}" hidden>
+    return localize(`<article class="page" id="page-${p.id}" data-page="${p.id}"${multi ? '' : ' hidden'}>
   <p class="eyebrow">${esc(p.group)}</p>
   <h1>${inline(p.title, p.id)}</h1>
   ${p.html}
@@ -266,27 +284,25 @@ function build() {
   </nav>
   <p class="edit"><a href="${REPO}/edit/main/${p.id === 'introduction' ? 'README.md' : 'docs/' + p.id + '.md'}" target="_blank" rel="noopener">Edit this page on GitHub</a></p>
   <template class="toc">${toc.map(h => `<li class="l${h.level}"><a href="#${esc(h.id)}">${esc(h.text)}</a></li>`).join('')}</template>
-</article>`;
-  }).join('\n');
+</article>`, from);
+  };
 
-  const icon = fs.readFileSync(path.join(ROOT, 'assets', 'icon.svg'), 'utf8').replace(/<\?xml[^>]*>/, '').replace(/<title>.*?<\/title>/, '')
-    .replace(/width="64" height="64"/, 'width="28" height="28"').replace(/id="ot-g"/, 'id="ot-site-g"').replace(/url\(#ot-g\)/, 'url(#ot-site-g)');
-
-  const body = `
+  const shell = (from, main) => `
 <div class="topbar"><div class="topbar-inner">
   <button class="menu" type="button" aria-label="Open the menu" aria-expanded="false" aria-controls="sidebar"><span></span><span></span><span></span></button>
-  <a class="brand" href="#introduction">${icon}<span>One<b>Take</b></span></a>
+  <a class="brand" href="${esc(multi ? pathFor(from, 'introduction') : '#introduction')}">${icon}<span>One<b>Take</b></span></a>
   <span class="version">v${esc(pkg.version)}</span>
   <button class="search-open" type="button" aria-label="Search the documentation"><svg viewBox="0 0 20 20" width="16" height="16" aria-hidden="true"><circle cx="8.5" cy="8.5" r="5.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M13 13l4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg><span>Search the docs</span><kbd>/</kbd></button>
   <nav class="top-links" aria-label="Links">
-    <a href="#api">API</a>
+    <a href="${esc(multi ? pathFor(from, 'api') : '#api')}">API</a>
+    <a href="${esc(multi ? pathFor(from, 'mcp') : '#mcp')}">MCP</a>
     <a href="${REPO}" target="_blank" rel="noopener">GitHub</a>
     <button class="theme" type="button" aria-label="Switch between light and dark"><svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true"><path d="M10 3a7 7 0 1 0 7 7 5.5 5.5 0 0 1-7-7z" fill="currentColor"/></svg></button>
   </nav>
 </div></div>
 <div class="layout">
-  <aside class="sidebar" id="sidebar" aria-label="Documentation">${nav}</aside>
-  <main class="content" id="content">${articles}</main>
+  <aside class="sidebar" id="sidebar" aria-label="Documentation">${nav(from)}</aside>
+  <main class="content" id="content">${main}</main>
   <aside class="onpage" aria-label="On this page"><h4>On this page</h4><ul id="onpage"></ul></aside>
 </div>
 <div class="search" id="search" hidden>
@@ -296,37 +312,61 @@ function build() {
     <p class="search-hint"><kbd>↑</kbd><kbd>↓</kbd> to move · <kbd>Enter</kbd> to open · <kbd>Esc</kbd> to close</p>
   </div>
 </div>
-<script>window.__SEARCH = ${JSON.stringify(search)};</script>
+<script>window.__SEARCH = ${JSON.stringify(search)}; window.__MULTI = ${multi}; window.__PAGE = ${JSON.stringify(from)}; window.__BASE = ${JSON.stringify(from === 'introduction' ? '' : '../')};</script>
 <script>${CLIENT_JS}</script>`;
 
-  const head = `<title>OneTake Docs</title>
+  const head = title => `<title>${esc(title)}</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <meta name="description" content="OneTake documentation: script product demo videos with a human-like cursor, camera zoom, highlights and a 60 fps recorder.">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap">
 <style>${CSS}</style>`;
 
+  fs.rmSync(OUT, { recursive: true, force: true });
   fs.mkdirSync(OUT, { recursive: true });
   if (fragment) {
-    fs.writeFileSync(path.join(OUT, 'fragment.html'), head + body);
+    fs.writeFileSync(path.join(OUT, 'fragment.html'), head('OneTake Docs') + shell('introduction', pages.map((p, n) => article(p, n, p.id)).join('\n')));
     console.log('built site/fragment.html');
-  } else {
-    const favicon = 'data:image/svg+xml;base64,' + Buffer.from(fs.readFileSync(path.join(ROOT, 'assets', 'icon.svg'))).toString('base64');
-    fs.writeFileSync(path.join(OUT, 'index.html'), `<!doctype html>
+    return;
+  }
+  const favicon = 'data:image/svg+xml;base64,' + Buffer.from(fs.readFileSync(path.join(ROOT, 'assets', 'icon.svg'))).toString('base64');
+  const doc = (title, from, main, canonical) => `<!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <link rel="icon" href="${favicon}">
-${head}
+<link rel="canonical" href="${SITE}${canonical}">
+${head(title)}
 </head>
-<body>${body}
+<body id="top">${shell(from, main)}
 </body>
 </html>
-`);
-    fs.writeFileSync(path.join(OUT, '.nojekyll'), '');
-    console.log(`built site/index.html (${pages.length} pages)`);
-  }
+`;
+  pages.forEach((p, n) => {
+    const dir = p.id === 'introduction' ? OUT : path.join(OUT, p.id);
+    fs.mkdirSync(dir, { recursive: true });
+    const title = p.id === 'introduction' ? 'OneTake Docs' : `${p.title} · OneTake Docs`;
+    fs.writeFileSync(path.join(dir, 'index.html'), doc(title, p.id, article(p, n, p.id), p.id === 'introduction' ? '' : p.id + '/'));
+  });
+
+  /* Plain-text copies for agents and tools: every page as Markdown, llms.txt and llms-full.txt. */
+  const mdDir = path.join(OUT, 'md');
+  fs.mkdirSync(mdDir, { recursive: true });
+  for (const p of pages) fs.writeFileSync(path.join(mdDir, p.id + '.md'), p.md);
+  fs.writeFileSync(path.join(OUT, 'llms.txt'), [
+    '# OneTake', '',
+    '> Script product demo videos for web apps: a human-like cursor drives the real UI, a smooth camera zooms on what matters, highlights and captions guide the viewer, and a frame-by-frame recorder renders a 60 fps MP4. `onetake mcp` is an MCP server for agents.', '',
+    '## Docs', '',
+    ...pages.map(p => `- [${p.title}](${SITE}md/${p.id}.md): ${p.group}`), '',
+    `Everything in one file: ${SITE}llms-full.txt`, `Source: ${REPO}`, ''
+  ].join('\n'));
+  fs.writeFileSync(path.join(OUT, 'llms-full.txt'), pages.map(p => p.md.trim()).join('\n\n---\n\n') + '\n');
+  fs.writeFileSync(path.join(OUT, '404.html'), doc('Not found · OneTake Docs', 'introduction',
+    '<article class="page"><p class="eyebrow">404</p><h1>Page not found</h1><p>That page doesn’t exist. <a href="' + SITE + '">Go to the introduction</a> or press <kbd>/</kbd> to search.</p></article>', '404.html')
+    .replace(/(href|src)="(?!https?:|#|data:)([^"]*)"/g, (m, a, u) => `${a}="${SITE}${u.replace(/^\.\//, '')}"`).replace('window.__BASE = ""', 'window.__BASE = ' + JSON.stringify(SITE)));
+  fs.writeFileSync(path.join(OUT, '.nojekyll'), '');
+  console.log(`built site/ (${pages.length} pages, md/, llms.txt, llms-full.txt)`);
 }
 
 /* ---------- styles ---------- */
@@ -495,7 +535,20 @@ kbd { font: 500 11px/1 var(--font-mono); padding: 3px 6px; border: 1px solid var
 
 const CLIENT_JS = `
 (function () {
+  var MULTI = !!window.__MULTI, BASE = window.__BASE || '', HERE = window.__PAGE;
   var pages = [].slice.call(document.querySelectorAll('.page'));
+  /** "page.section" → a link: a real path on the site, a hash in the one-file preview. */
+  function urlFor(id) {
+    if (!MULTI) return '#' + id;
+    var pg = id.split('.')[0], sec = id.slice(pg.length + 1);
+    if (pg === HERE) return '#' + (sec || 'top');
+    return (BASE + (pg === 'introduction' ? '' : pg + '/') || './') + (sec ? '#' + sec : '');
+  }
+  // Old one-page links (…/onetake/#mcp, #api.options) still work: send them to the page.
+  if (MULTI && HERE === 'introduction' && location.hash) {
+    var old = location.hash.slice(1), pg = old.split('.')[0];
+    if (pg !== 'introduction' && window.__SEARCH.some(function (x) { return x.id === pg; })) location.replace(urlFor(old));
+  }
   var navLinks = [].slice.call(document.querySelectorAll('.sidebar a'));
   var onpage = document.getElementById('onpage');
   var current = null;
@@ -512,6 +565,14 @@ const CLIENT_JS = `
   });
 
   function show(hash) {
+    if (MULTI) {                                            // one page per file: just the contents rail and the hash target
+      current = pages[0];
+      var tpl = current && current.querySelector('template.toc');
+      onpage.innerHTML = tpl ? tpl.innerHTML : '';
+      document.body.classList.remove('nav-open');
+      spy();
+      return;
+    }
     var target = (hash || '').replace(/^#/, '') || 'introduction';
     var pageId = target.split('.')[0];
     var page = document.getElementById('page-' + pageId) || document.getElementById('page-introduction');
@@ -540,13 +601,14 @@ const CLIENT_JS = `
 
   document.addEventListener('click', function (e) {
     var a = e.target.closest && e.target.closest('a[href^="#"]');
-    if (a) {                                               // in-page links work even where the address bar doesn't follow
+    if (a && !MULTI) {                                               // in-page links work even where the address bar doesn't follow
       e.preventDefault();
       var h = a.getAttribute('href');
       try { history.pushState(null, '', h); } catch (err) { /* sandboxed */ }
       show(h);
       closeSearch();
     }
+    if (MULTI && e.target.closest && e.target.closest('#search-results a')) closeSearch();
     var copy = e.target.closest && e.target.closest('.copy');
     if (copy) {
       var text = copy.closest('.code').querySelector('code').innerText;
@@ -578,13 +640,13 @@ const CLIENT_JS = `
   });
   function render() {
     var q = input.value.trim().toLowerCase(), list = window.__SEARCH;
-    var hits = !q ? list.filter(function (x) { return x.id === x.p; }) : list.map(function (x) {
+    var hits = !q ? list.filter(function (x) { return x.id.indexOf('.') === -1; }) : list.map(function (x) {
       var t = x.t.toLowerCase(), i = t.indexOf(q);
-      return i === -1 ? null : { x: x, s: (i === 0 ? 0 : 1) + (x.id === x.p ? 0 : 2) + t.length / 200 };
+      return i === -1 ? null : { x: x, s: (i === 0 ? 0 : 1) + (x.id.indexOf('.') === -1 ? 0 : 2) + t.length / 200 };
     }).filter(Boolean).sort(function (a, b) { return a.s - b.s; }).map(function (h) { return h.x; });
     hits = hits.slice(0, 40); sel = 0;
     results.innerHTML = hits.length ? hits.map(function (x, i) {
-      return '<li><a href="#' + x.id + '"' + (i === 0 ? ' aria-selected="true"' : '') + '>' + escapeHtml(x.t) + '<small>' + escapeHtml(x.g) + '</small></a></li>';
+      return '<li><a href="' + urlFor(x.id) + '"' + (i === 0 ? ' aria-selected="true"' : '') + '>' + escapeHtml(x.t) + '<small>' + escapeHtml(x.g) + '</small></a></li>';
     }).join('') : '<li class="empty">Nothing found for “' + escapeHtml(input.value) + '”</li>';
   }
   function escapeHtml(s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }

@@ -12,6 +12,24 @@ const { runSession, contextOptions, initGlobals, saveFailure } = require('./sess
 const clockLib = fs.readFileSync(path.join(__dirname, 'clock.js'), 'utf8');
 const even = n => Math.round(n / 2) * 2;
 
+/*
+ * Sub-pixel camera. Page.captureScreenshot draws a clip at `scale` capture pixels per CSS
+ * pixel (it ignores the device pixel ratio), rounds the clip's origin to a whole capture
+ * pixel, and cuts its width and height down to whole CSS pixels. Left alone, a slowly moving
+ * zoom steps by up to a pixel per frame and its size wobbles by a few. So: snap the origin to
+ * the capture-pixel grid ourselves, ask for a slightly larger clip, crop it to the exact size
+ * in ffmpeg, and render zooms OVERSAMPLE× larger than the output (ffmpeg scales them down).
+ * Motion is then accurate to a quarter of an output pixel and text stays sharp.
+ */
+function oversample(dpr) {
+  return Math.max(1, +process.env.ONETAKE_ZOOM_OVERSAMPLE || Math.round(2 / dpr));
+}
+function smoothClip(x, y, width, height, scale) {
+  // aim a quarter pixel past the grid line, so float error can't round to the wrong pixel
+  const snap = v => (Math.round(v * scale) + 0.25) / scale;
+  return { x: snap(x), y: snap(y), width: Math.ceil(width) + 1, height: Math.ceil(height) + 1, scale };
+}
+
 /**
  * Render the tour to `out.file` (H.264). Returns { error, events, track, frames, size, failure }.
  * out: { file, crf, preset }
@@ -44,7 +62,8 @@ function aspectCrop(cfg) {
       cy += (want(cy, ty, h) - cy) * k;
       cx = Math.min(Math.max(cx, r.x + w / 2), r.x + r.w - w / 2);
       cy = Math.min(Math.max(cy, r.y + h / 2), r.y + r.h - h / 2);
-      return { x: cx - w / 2 + scroll.x, y: cy - h / 2 + scroll.y, width: w, height: h, scale: H / h / cfg.scale };
+      const x = cx - w / 2, y = cy - h / 2;
+      return { view: { x, y, width: w, height: h }, clip: smoothClip(x + scroll.x, y + scroll.y, w, h, H / h * oversample(cfg.scale)) };
     }
   };
 }
@@ -61,10 +80,11 @@ module.exports = async function recordFrames(browser, cfg, ffmpeg, out, log = co
   const crop = aspectCrop(cfg);
   const W = crop ? crop.W : even(vw * cfg.scale), H = crop ? crop.H : even(vh * cfg.scale);
   const png = cfg.captureFormat === 'png';
+  const OS = oversample(cfg.scale);
   const ff = spawn(ffmpeg, [
     '-y', '-loglevel', 'error',
     '-f', 'image2pipe', '-framerate', String(cfg.fps), '-c:v', png ? 'png' : 'mjpeg', '-i', '-',
-    '-vf', `scale=${W}:${H}:flags=lanczos`,
+    '-vf', `crop=w='min(iw,${W * OS})':h='min(ih,${H * OS})':x=0:y=0,scale=${W}:${H}:flags=lanczos`,
     '-c:v', 'libx264', '-preset', out.preset || 'medium', '-crf', String(out.crf), '-pix_fmt', 'yuv420p',
     '-r', String(cfg.fps), '-movflags', '+faststart', out.file
   ], { stdio: ['pipe', 'inherit', 'inherit'] });
@@ -84,12 +104,14 @@ module.exports = async function recordFrames(browser, cfg, ffmpeg, out, log = co
       : { format: 'jpeg', quality: 95, fromSurface: true, optimizeForSpeed: true };
     lastView = null;
     if (crop) {
-      params.clip = crop.next(cam, pos, dt, scroll);
-      lastView = { x: params.clip.x - scroll.x, y: params.clip.y - scroll.y, width: params.clip.width, height: params.clip.height };
+      ({ clip: params.clip, view: lastView } = crop.next(cam, pos, dt, scroll));
     } else if (cam && cam.scale > 1.0005) {
       lastView = { x: cam.x, y: cam.y, width: cam.width, height: cam.height };
       // Camera zoom: capture just the camera's rectangle, rendered at a higher scale (sharp text, not upscaled pixels).
-      params.clip = { x: cam.x + cam.sx, y: cam.y + cam.sy, width: cam.width, height: cam.height, scale: cam.scale };
+      params.clip = smoothClip(cam.x + cam.sx, cam.y + cam.sy, cam.width, cam.height, cam.scale * cfg.scale * OS);
+    } else {
+      // the whole viewport, at the device pixel ratio (without a clip, Chromium captures at 1×)
+      params.clip = { x: scroll.x, y: scroll.y, width: vw, height: vh, scale: cfg.scale };
     }
     const shot = await cdp.send('Page.captureScreenshot', params);
     if (!ff.stdin.write(Buffer.from(shot.data, 'base64'))) await new Promise(r => ff.stdin.once('drain', r));

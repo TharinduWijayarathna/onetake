@@ -16,7 +16,7 @@ const ROOT = path.join(__dirname, '..');
 const DOCS = path.join(ROOT, 'docs');
 const OUT = path.join(ROOT, 'site');
 const pkg = require(path.join(ROOT, 'package.json'));
-const REPO = 'https://github.com/TharinduWijayarathna/one-take';
+const REPO = 'https://github.com/TharinduWijayarathna/onetake';
 const fragment = process.argv.includes('--fragment');
 
 /* ---------- navigation ---------- */
@@ -241,7 +241,7 @@ function build() {
     pages.push({ id, label, group, title: title || label, html, toc });
   }
   // README links point at docs/*.md from the repo root; inside the intro they're page links.
-  pages[0].html = pages[0].html.replace(/href="https:\/\/github\.com\/TharinduWijayarathna\/one-take\/blob\/main\/docs\/([\w-]+)\.md(?:#([\w-]+))?"/g,
+  pages[0].html = pages[0].html.replace(/href="https:\/\/github\.com\/TharinduWijayarathna\/onetake\/blob\/main\/docs\/([\w-]+)\.md(?:#([\w-]+))?"/g,
     (m, p, a) => `href="#${p}${a ? '.' + a : ''}"`);
 
   const search = [];

@@ -67,7 +67,7 @@ module.exports = {
 `;
 
 const TEMPLATE_TOUR = `// A OneTake tour: plain JavaScript run in the page with \`take\` ready.
-// Docs: https://github.com/TharinduWijayarathna/one-take/tree/main/docs
+// Docs: https://github.com/TharinduWijayarathna/onetake/tree/main/docs
 take
   .chapter('Welcome')
   .caption('Welcome to My App', { duration: 2500 })

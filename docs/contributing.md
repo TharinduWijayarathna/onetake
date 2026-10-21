@@ -1,7 +1,7 @@
 # Contributing
 
 ```bash
-git clone https://github.com/TharinduWijayarathna/one-take && cd one-take
+git clone https://github.com/TharinduWijayarathna/onetake && cd onetake
 npm install
 npx playwright install chromium
 npm test

@@ -1,6 +1,6 @@
 // The tour. `take` is a ready OneTake instance; one script can cross page loads.
 // Rehearse:  npx onetake check --speed 4      Render:  bash record.sh
-// API: https://github.com/TharinduWijayarathna/one-take/blob/main/docs/api.md
+// API: https://github.com/TharinduWijayarathna/onetake/blob/main/docs/api.md
 
 take
   .chapter('Create a project')

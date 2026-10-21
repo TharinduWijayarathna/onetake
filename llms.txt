@@ -8,6 +8,7 @@
 - [skills/onetake-demo-video/SKILL.md](skills/onetake-demo-video/SKILL.md): the same workflow as a Claude skill.
 - [templates/demo-kit/](templates/demo-kit/): starter kit to copy next to a project (onetake.config.js, tour.js, steps.js, record.sh).
 - [docs/ai-agents.md](docs/ai-agents.md): how people ask an agent for a video.
+- [docs/mcp.md](docs/mcp.md): `onetake mcp`, an MCP server with open_page, inspect_page (targets for every control), test_target, run_steps, screenshot, check_tour, record_video, get_docs.
 
 ## Docs
 

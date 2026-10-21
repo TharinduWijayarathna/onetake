@@ -56,6 +56,11 @@ test ids (`[data-testid]`, `[dusk]`) · CSS. Scope ambiguous ones: `'#card-3 >> 
 the components worth zooming on, and where page loads happen. In a browser console,
 `OneTake.query('…')` says whether a target is unique.
 
+If the `onetake` MCP server is connected (`docs/mcp.md`), use its tools for this step:
+`open_page { cwd: <kit> }` and `inspect_page` list every control with a target that works,
+`test_target` checks the ones you write, and `run_steps` moves through the flow to the next page.
+Later, `check_tour` and `record_video` replace the shell commands.
+
 ## 5. Write the tour
 
 Edit `onetake.config.js` (url, viewport, name, frame title, intro/outro text) and `tour.js`.

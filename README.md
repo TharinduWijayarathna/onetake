@@ -58,7 +58,8 @@ npx onetake record --frame --intro "Northwind CRM|Adding a contact" --sound
   markers plus a YouTube chapter list, a thumbnail, WebM and GIF, and vertical `9:16` crops
   that follow the cursor.
 - **Agents can use it.** `AGENTS.md`, a Claude skill and `llms.txt` teach any coding agent
-  to make a video of your project, from your browser tests to the final render.
+  to make a video of your project, and `onetake mcp` gives MCP clients tools to inspect pages,
+  test targets, check the tour and render it.
 
 ## Get started
 
@@ -86,6 +87,7 @@ Read it online at **[tharinduwijayarathna.github.io/onetake](https://tharinduwij
 | [Output](docs/output.md) | Frame, cards, sound, subtitles, chapters, thumbnails, GIF, vertical video |
 | [Recipes](docs/recipes.md) | Dropdowns, date pickers, uploads, drag and drop, demo data, CI |
 | [AI agents](docs/ai-agents.md) | Let an agent make the video |
+| [MCP server](docs/mcp.md) | `onetake mcp`: inspect pages, test targets, check and record from any MCP client |
 | [Troubleshooting](docs/troubleshooting.md) | Every error message, and what to do |
 | [Architecture](docs/architecture.md) · [Contributing](docs/contributing.md) | |
 

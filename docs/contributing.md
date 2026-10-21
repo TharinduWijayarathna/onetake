@@ -44,6 +44,7 @@ file to `docs/` and to `NAV` at the top of the script.
 | `npm test` | build + unit tests | ~15 s |
 | `npm run test:compat` | 12 fixtures × 2 input modes | ~1 min |
 | `npm run test:record` | recorder and renderer end to end | ~2 min |
+| `npm run test:mcp` | the MCP server over stdio | ~20 s |
 | `npm run test:visual` | golden frames | ~30 s |
 | `npx -p typescript tsc -p test/types` | the types | |
 

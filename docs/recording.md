@@ -117,7 +117,9 @@ Then it screenshots the frame and streams it into ffmpeg. The result:
 - **Identical takes.** With the same seed, two renders have the same timing to the frame.
   The recorder even pauses the clock while a page load is on its way, so server speed doesn't
   show up in the video.
-- **Sharp zoom.** `zoom()` captures the zoomed rectangle at full resolution.
+- **Sharp, smooth zoom.** `zoom()` re-renders the zoomed rectangle at full resolution
+  (2× larger at `scale: 1`, then scaled down), positioned to a quarter of a pixel, so slow
+  camera moves glide instead of stepping.
 
 Not controlled by the clock: Web Workers, WebSockets and server-side timing, audio, and
 media other than `<video>`. Network requests take the time they take (with the clock
@@ -183,3 +185,4 @@ See [Recipes → Render in CI](recipes.md#render-the-video-in-ci).
 |---|---|
 | `CHROMIUM_PATH` | Use this Chromium instead of Playwright's. |
 | `FFMPEG_PATH` | Use this ffmpeg instead of `ffmpeg-static` or the one on the `PATH`. |
+| `ONETAKE_ZOOM_OVERSAMPLE` | How much larger zoomed frames are rendered before scaling down (default 2 at `scale: 1`, 1 at `scale: 2`). 3 is smoother still and slower; 1 is fastest. |

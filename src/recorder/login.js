@@ -19,7 +19,7 @@
  */
 const fs = require('fs');
 const path = require('path');
-const { fail, loadPlaywright } = require('./util');
+const { fail, launchChromium } = require('./util');
 
 const args = {};
 for (let i = 2; i < process.argv.length; i++) {
@@ -27,13 +27,11 @@ for (let i = 2; i < process.argv.length; i++) {
   if (k.startsWith('--')) args[k.slice(2)] = process.argv[i + 1] && !process.argv[i + 1].startsWith('--') ? process.argv[++i] : true;
 }
 const out = path.resolve(args.out || 'auth.json');
-const { chromium } = loadPlaywright();
-const launch = process.env.CHROMIUM_PATH ? { executablePath: process.env.CHROMIUM_PATH } : {};
 
 (async () => {
   if (args.check) {
     if (!fs.existsSync(out)) process.exit(1);
-    const browser = await chromium.launch(launch);
+    const browser = await launchChromium(true);
     const page = await (await browser.newContext({ storageState: out })).newPage();
     await page.goto(args.check, { waitUntil: 'domcontentloaded' });
     const loggedOut = new RegExp(args.login || '/login').test(page.url());
@@ -42,7 +40,7 @@ const launch = process.env.CHROMIUM_PATH ? { executablePath: process.env.CHROMIU
   }
 
   if (!args.url) fail('Usage: onetake login --url <login page> [--until <regex>] [--out auth.json]');
-  const browser = await chromium.launch({ ...launch, headless: false });
+  const browser = await launchChromium(false);
   const context = await browser.newContext({ viewport: { width: +(args.width || 1440), height: +(args.height || 900) } });
   const page = await context.newPage();
   await page.goto(args.url);

@@ -1,7 +1,7 @@
 /* Shared helpers for the OneTake recorder. */
 const fs = require('fs');
 const path = require('path');
-const { execFileSync } = require('child_process');
+const { execFileSync, spawnSync } = require('child_process');
 
 const ROOT = path.join(__dirname, '..', '..');
 
@@ -9,7 +9,7 @@ function fail(msg) { console.error('✖ ' + msg); process.exit(1); }
 
 function loadPlaywright() {
   try { return require('playwright'); }
-  catch (e) { fail('Playwright is not installed. Run:  npm install && npx playwright install chromium'); }
+  catch (e) { fail('Playwright is not installed. Run:  npm install, then npx onetake setup'); }
 }
 
 /** ffmpeg from FFMPEG_PATH, the ffmpeg-static package, or the PATH. */
@@ -37,4 +37,28 @@ function attachLogging(page) {
   page.on('console', m => { if (m.type() === 'error') console.error('[console]', m.text()); });
 }
 
-module.exports = { ROOT, fail, loadPlaywright, findFfmpeg, readLibrary, isNavError, attachLogging };
+/** Launch Chromium; when Playwright's browser isn't installed, say how to fix it. */
+async function launchChromium(headless = true) {
+  const { chromium } = loadPlaywright();
+  const opts = { headless };
+  if (process.env.CHROMIUM_PATH) opts.executablePath = process.env.CHROMIUM_PATH;
+  try { return await chromium.launch(opts); }
+  catch (e) {
+    if (/Executable doesn't exist|install/i.test(e.message)) {
+      throw new Error("Chromium for OneTake isn't installed yet. Run:  npx onetake setup   (Linux CI: npx onetake setup --with-deps)");
+    }
+    throw e;
+  }
+}
+
+/** Install the Chromium build that matches OneTake's own Playwright version. */
+function installBrowser(extra = []) {
+  let dir;
+  try { dir = path.dirname(require.resolve('playwright/package.json')); }
+  catch (e) { dir = path.dirname(require.resolve('playwright')); }
+  const cli = path.join(dir, 'cli.js');
+  const r = spawnSync(process.execPath, [cli, 'install', 'chromium', ...extra], { stdio: 'inherit' });
+  return r.status == null ? 1 : r.status;
+}
+
+module.exports = { ROOT, fail, loadPlaywright, findFfmpeg, readLibrary, isNavError, attachLogging, launchChromium, installBrowser };

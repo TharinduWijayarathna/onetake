@@ -51,11 +51,11 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/TharinduWijayarathna/one-take.git"
+    "url": "git+https://github.com/TharinduWijayarathna/onetake.git"
   },
-  "homepage": "https://tharinduwijayarathna.github.io/one-take/",
+  "homepage": "https://tharinduwijayarathna.github.io/onetake/",
   "bugs": {
-    "url": "https://github.com/TharinduWijayarathna/one-take/issues"
+    "url": "https://github.com/TharinduWijayarathna/onetake/issues"
   },
   "dependencies": {
     "playwright": "^1.56.1"

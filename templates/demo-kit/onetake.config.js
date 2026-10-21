@@ -1,5 +1,5 @@
 // OneTake settings for this demo. Every key can also be a command-line flag (onetake help).
-// Docs: https://github.com/TharinduWijayarathna/one-take/blob/main/docs/recording.md
+// Docs: https://github.com/TharinduWijayarathna/onetake/blob/main/docs/recording.md
 /** @type {import('onetake').Config} */
 module.exports = {
   url: 'http://localhost:3000/',          // the page the tour starts on

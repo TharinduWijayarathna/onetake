@@ -1,5 +1,5 @@
 // Type definitions for OneTake 2.x
-// Project: https://github.com/TharinduWijayarathna/one-take
+// Project: https://github.com/TharinduWijayarathna/onetake
 // Docs: docs/api.md
 //
 // In a tour script run by the recorder, `take` is a ready OneTake instance. For editor

@@ -10,7 +10,7 @@
 In your project, or in a separate folder next to it:
 
 ```bash
-npm install --save-dev github:TharinduWijayarathna/one-take
+npm install --save-dev github:TharinduWijayarathna/onetake
 npx playwright install chromium       # the browser the recorder drives
 ```
 

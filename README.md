@@ -63,7 +63,7 @@ npx onetake record --frame --intro "Northwind CRM|Adding a contact" --sound
 ## Get started
 
 ```bash
-npm install --save-dev github:TharinduWijayarathna/one-take
+npm install --save-dev github:TharinduWijayarathna/onetake
 npx playwright install chromium
 npx onetake init          # onetake.config.js + tour.js
 npx onetake check         # try the tour
@@ -72,7 +72,7 @@ npx onetake record        # → videos/demo.mp4
 
 ## Documentation
 
-Read it online at **[tharinduwijayarathna.github.io/one-take](https://tharinduwijayarathna.github.io/one-take/)**, or right here:
+Read it online at **[tharinduwijayarathna.github.io/onetake](https://tharinduwijayarathna.github.io/onetake/)**, or right here:
 
 | | |
 |---|---|

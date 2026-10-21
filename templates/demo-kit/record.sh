@@ -10,7 +10,7 @@ set -euo pipefail
 # ── CONFIG ──────────────────────────────────────────────────────────────────────────────
 LOGIN_PATH=""                 # e.g. "/login" when the app needs a sign-in; leave empty if not
 AFTER_LOGIN=""                # regex for the page you land on after signing in, e.g. "/dashboard"
-ONETAKE="${ONETAKE_DIR:-$HOME/one-take}"   # a clone of https://github.com/TharinduWijayarathna/one-take
+ONETAKE="${ONETAKE_DIR:-$HOME/one-take}"   # a clone of https://github.com/TharinduWijayarathna/onetake
 # ────────────────────────────────────────────────────────────────────────────────────────
 
 HERE="$(cd "$(dirname "$0")" && pwd)"
@@ -19,7 +19,7 @@ step() { printf '\n\033[1m▸ %s\033[0m\n' "$1"; }
 
 if [ ! -d "$ONETAKE" ]; then
   step "Cloning OneTake into $ONETAKE"
-  git clone -q https://github.com/TharinduWijayarathna/one-take.git "$ONETAKE"
+  git clone -q https://github.com/TharinduWijayarathna/onetake.git "$ONETAKE"
 fi
 [ -d "$ONETAKE/node_modules/playwright" ] || (cd "$ONETAKE" && npm install --no-audit --no-fund)
 (cd "$ONETAKE" && npx playwright install chromium >/dev/null) || echo "⚠ could not run playwright install; continuing with the installed browser"

@@ -5,7 +5,7 @@ description: Create a polished product demo video of a web app with OneTake (scr
 
 # Make a demo video of a web app with OneTake
 
-OneTake (https://github.com/TharinduWijayarathna/one-take) drives a real web app with a
+OneTake (https://github.com/TharinduWijayarathna/onetake) drives a real web app with a
 human-looking cursor and trusted input, zooms the camera on what matters, draws highlights
 and captions, and renders frame by frame to a 60 fps MP4. You write one tour script; the
 recorder does the rest, including tours that cross page loads. Every take is identical
@@ -17,7 +17,7 @@ recorder does the rest, including tours that cross page loads. Every take is ide
 ## 1. Get OneTake and the kit
 
 - Use an existing clone if there is one (look next to the project, e.g. `../one-take`), or
-  `git clone https://github.com/TharinduWijayarathna/one-take.git`. Inside it, run
+  `git clone https://github.com/TharinduWijayarathna/onetake.git`. Inside it, run
   `npm install && npx playwright install chromium`.
 - The CLI is `node <one-take>/bin/onetake.js` (`onetake` below). `onetake help` lists every flag.
 - Copy `<one-take>/templates/demo-kit/` to `<project>-demo/`. For details beyond this skill,

@@ -200,12 +200,12 @@ function watchFiles(cfg, run) {
 }
 
 async function main(argv) {
+  if (argv[0] === 'login') return login(argv.slice(1));     // login has its own options (--check, --until, …)
   let parsed;
   try { parsed = parseArgs(argv); } catch (e) { fail(e.message); }
   const cmd = parsed.command || 'help';
   if (cmd === 'help' || parsed.meta.help) { console.log(HELP); return; }
   if (cmd === 'init') return init(parsed.positional[0]);
-  if (cmd === 'login') return login(argv.slice(1));
   if (cmd !== 'record' && cmd !== 'check') fail(`Unknown command "${cmd}". Run: onetake help`);
 
   const load = () => { const c = resolveConfig(parsed); validate(c); return c; };

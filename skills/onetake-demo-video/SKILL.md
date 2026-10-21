@@ -16,13 +16,13 @@ recorder does the rest, including tours that cross page loads. Every take is ide
 
 ## 1. Get OneTake and the kit
 
-- Use an existing clone if there is one (look next to the project, e.g. `../one-take`), or
+- Use an existing clone if there is one (look next to the project, e.g. `../onetake` or `../one-take`), or
   `git clone https://github.com/TharinduWijayarathna/onetake.git`. Inside it, run
   `npm install && npx playwright install chromium`.
-- The CLI is `node <one-take>/bin/onetake.js` (`onetake` below). `onetake help` lists every flag.
-- Copy `<one-take>/templates/demo-kit/` to `<project>-demo/`. For details beyond this skill,
-  read `<one-take>/AGENTS.md` and `<one-take>/docs/` (api.md, targets.md, recipes.md,
-  troubleshooting.md).
+- The CLI is `node <onetake>/bin/onetake.js` (`onetake` below). `onetake help` lists every flag.
+- Copy `<onetake>/templates/demo-kit/` to `<project>-demo/`. For details beyond this skill,
+  read `<onetake>/AGENTS.md` and `<onetake>/docs/` (api.md, targets.md, recipes.md,
+  troubleshooting.md, mcp.md), or the docs site https://tharinduwijayarathna.github.io/onetake/.
 
 ## 2. Pick the scenario from the project's own browser tests
 
@@ -49,17 +49,17 @@ recorder does the rest, including tours that cross page loads. Every take is ide
 
 ## 4. Map the live DOM
 
-For each control in the flow, pick the best target, in this order:
+If the `onetake` MCP server is connected (`docs/mcp.md`), use its tools for this step:
+`open_page { cwd: <kit> }` and `inspect_page` list every control with a target that works,
+`test_target` checks the ones you write, and `run_steps` moves through the flow to the next page.
+Later, `check_tour` and `record_video` replace the shell commands.
+
+Without it, pick the best target for each control, in this order:
 `role=button[name="Save"]` · `text=Save` (exact, must be unique) · `label=Email` (form fields) ·
 test ids (`[data-testid]`, `[dusk]`) · CSS. Scope ambiguous ones: `'#card-3 >> text=Open'`,
 `'tbody tr >> nth=2 >> text=Edit'`. Note custom widgets (copy the test helpers' approach),
 the components worth zooming on, and where page loads happen. In a browser console,
 `OneTake.query('…')` says whether a target is unique.
-
-If the `onetake` MCP server is connected (`docs/mcp.md`), use its tools for this step:
-`open_page { cwd: <kit> }` and `inspect_page` list every control with a target that works,
-`test_target` checks the ones you write, and `run_steps` moves through the flow to the next page.
-Later, `check_tour` and `record_video` replace the shell commands.
 
 ## 5. Write the tour
 
@@ -112,14 +112,15 @@ Make it look professional:
 
 ## 6. Check, render, look
 
-1. **Check**: `CHECK_ONLY=1 bash record.sh`, or `onetake check --speed 4` in the kit. It
-   lists every step. On failure, it gives the step, the line and the reason ("covered by …",
-   "matches 3 elements", "its text is …"), plus `videos/check.failure.png` and `.html`. Read
-   the screenshot, fix, and repeat until it passes. `--watch` re-runs it on save.
-2. **Render**: `bash record.sh`. For a quick preview, add `--scale 1 --fps 30`. Useful flags:
-   `--now 2026-11-02T09:00` (stable dates), `--frame <bg> --title …`, `--intro "T|S"`,
-   `--outro "T|S"`, `--sound`, `--music file`, `--formats mp4,gif`, `--aspect 9:16`,
-   `--auto-zoom`, `--timeline`.
+1. **Check**: `check_tour { cwd }` with the MCP server, or `CHECK_ONLY=1 bash record.sh` /
+   `onetake check --speed 4` in the kit. It lists every step. On failure, it gives the step, the
+   line and the reason ("covered by …", "matches 3 elements", "its text is …"), plus
+   `videos/check.failure.png` and `.html`. Read the screenshot, fix, and repeat until it passes.
+   `--watch` re-runs it on save.
+2. **Render**: `record_video { cwd, preview: true }`, or `bash record.sh`. For a quick preview,
+   add `--scale 1 --fps 30`. Useful flags: `--now 2026-11-02T09:00` (stable dates),
+   `--frame <bg> --title …`, `--intro "T|S"`, `--outro "T|S"`, `--sound`, `--music file`,
+   `--formats mp4,gif`, `--aspect 9:16`, `--auto-zoom`, `--timeline`.
 3. **Look** at a few frames before calling it done:
    `ffmpeg -ss 10 -i videos/demo.mp4 -frames:v 1 f.png`. Check the zoom framing,
    highlights, captions and the final state.
@@ -130,7 +131,8 @@ Make it look professional:
 ## Gotchas
 
 - `text=` is exact and strict. When it matches several elements, scope it or use `nth=`.
-  `text*=` is "contains" (the shortest match).
+  `text*=` is "contains" (the shortest match). Button text often has extras ("+ New option"):
+  use `role=link[name*="New option"]`.
 - `label=` is for form fields. For icon buttons with an `aria-label`, use
   `role=button[name="…"]`.
 - Custom selects keep the value in a hidden input: click the trigger, then the

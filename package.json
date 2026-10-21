@@ -22,6 +22,7 @@
     "types/",
     "templates/",
     "skills/",
+    "docs/",
     "assets/icon.svg",
     "AGENTS.md",
     "llms.txt"

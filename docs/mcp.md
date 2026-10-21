@@ -11,19 +11,19 @@ terminal, such as Claude Desktop, the whole workflow.
 
 ## Set it up
 
-You need a clone (or an install) of OneTake with Playwright's Chromium:
+No clone needed. Install OneTake once, globally, with its browser:
 
 ```bash
-git clone https://github.com/TharinduWijayarathna/onetake ~/onetake
-cd ~/onetake && npm install && npx playwright install chromium
+npm install -g github:TharinduWijayarathna/onetake
+onetake setup
 ```
 
-Then add the server to your agent. Use the absolute path to `bin/onetake.js`.
+Then add the server to your agent.
 
 **Claude Code**
 
 ```bash
-claude mcp add onetake -- node ~/onetake/bin/onetake.js mcp
+claude mcp add onetake -- onetake mcp
 ```
 
 **Claude Desktop** (`claude_desktop_config.json`), **Cursor** (`.cursor/mcp.json`) and most other clients:
@@ -31,10 +31,7 @@ claude mcp add onetake -- node ~/onetake/bin/onetake.js mcp
 ```json
 {
   "mcpServers": {
-    "onetake": {
-      "command": "node",
-      "args": ["/Users/you/onetake/bin/onetake.js", "mcp"]
-    }
+    "onetake": { "command": "onetake", "args": ["mcp"] }
   }
 }
 ```
@@ -43,13 +40,39 @@ claude mcp add onetake -- node ~/onetake/bin/onetake.js mcp
 
 ```toml
 [mcp_servers.onetake]
-command = "node"
-args = ["/Users/you/onetake/bin/onetake.js", "mcp"]
+command = "onetake"
+args = ["mcp"]
 ```
+
+Without a global install, use `npx` instead: command `npx`, args
+`["-y", "github:TharinduWijayarathna/onetake", "mcp"]` (the first start downloads it). If the
+client can't find `onetake` or `npx`, give the full path (`which onetake`). From a clone, use
+`node /path/to/onetake/bin/onetake.js mcp`.
 
 The server runs headless Chromium in the background and keeps one page open between calls.
 Most tools take `cwd`: the demo kit folder with `onetake.config.js` and `auth.json`. Clients
 start servers in different folders, so agents should always pass it.
+
+## Why it runs on your machine
+
+The server can't be hosted on the docs site, or anywhere else, and pointed at by URL:
+
+- GitHub Pages only serves static files, and an MCP server is a running program.
+- More importantly, the tools drive a real browser that has to reach *your* app, usually on
+  `localhost` and signed in with your `auth.json`. A server somewhere else can't see your
+  `localhost`, and shouldn't hold your session.
+
+So `onetake mcp` runs locally, started by your agent. What the site does host is the docs in
+forms agents read directly, with no server:
+
+| URL | |
+|---|---|
+| `https://tharinduwijayarathna.github.io/onetake/llms.txt` | The map of the docs, with a link to every page |
+| `https://tharinduwijayarathna.github.io/onetake/llms-full.txt` | Every page in one file |
+| `https://tharinduwijayarathna.github.io/onetake/md/<page>.md` | One page as Markdown, e.g. `md/mcp.md` |
+| `https://tharinduwijayarathna.github.io/onetake/<page>/` | The page itself, e.g. `mcp/`, `api/#options` |
+
+An agent that can fetch URLs can learn OneTake from these even before the server is installed.
 
 ## Tools
 
@@ -106,9 +129,9 @@ sturdier (`'#card-3 >> text=Open'`) and check it with `test_target`.
 
 ## Troubleshooting
 
-- **"Executable doesn't exist"**: run `npx playwright install chromium` in the OneTake folder.
+- **"Chromium for OneTake isn't installed yet"**: run `onetake setup`.
 - **The page opens signed out**: the tool says so. Create the login with `onetake login`
   ([Recording → Logins](recording.md#logins)).
 - **Nothing happens in the client**: the server logs to stderr. Run
-  `node bin/onetake.js mcp` in a terminal: it prints `onetake MCP server … ready` and waits for
+  `onetake mcp` in a terminal: it prints `onetake MCP server … ready` and waits for
   JSON-RPC on stdin.

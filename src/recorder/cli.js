@@ -1,7 +1,8 @@
 /**
  * onetake: record product demo videos from a OneTake tour script.
  *
- *   onetake init                         scaffold onetake.config.js + tour.js here
+ *   onetake setup                        install the Chromium build OneTake's Playwright needs
+ *   onetake init                         scaffold a demo kit here (from templates/demo-kit)
  *   onetake check  [tour.js] [options]   play the tour without recording, fast; report each step
  *   onetake record [tour.js] [options]   render the video (60 fps frame by frame by default)
  *   onetake login  --url <login page> [--until <regex>] [--out auth.json]   save a signed-in session
@@ -12,14 +13,15 @@
 const fs = require('fs');
 const path = require('path');
 const { spawnSync } = require('child_process');
-const { fail, loadPlaywright, findFfmpeg } = require('./util');
+const { fail, findFfmpeg, launchChromium, installBrowser } = require('./util');
 const { parseArgs, resolveConfig } = require('./config');
 
 const HELP = `
 OneTake: scripted product demo videos
 
 Usage
-  onetake init [folder]                 create onetake.config.js and tour.js
+  onetake setup [--with-deps]           install the Chromium build OneTake uses (once)
+  onetake init [folder]                 create a demo kit: onetake.config.js, tour.js, steps.js, record.sh
   onetake check  [tour.js…] [options]   dry run: play the tour (no video), stop at the first broken step
   onetake record [tour.js…] [options]   render the video
   onetake login  --url <login page> [--until <regex>] [--out auth.json]
@@ -50,57 +52,26 @@ Output
   --watch                   re-run when the tour, includes or config change
 `;
 
-const TEMPLATE_CONFIG = `// OneTake settings. Every option can also be given on the command line (see: npx onetake help).
-module.exports = {
-  url: 'http://localhost:3000',      // the page the tour starts on
-  tour: 'tour.js',                   // one script can span several pages
-  // storage: 'auth.json',           // start signed in: npx onetake login --url http://localhost:3000/login
-  viewport: { width: 1440, height: 900 },
-  scale: 2,                          // 2880x1800 output, crisp text
-  fps: 60,
-  name: 'demo',
-  out: 'videos',
-  frame: { background: 'gradient', title: 'My App' },
-  intro: { title: 'My App', subtitle: 'A two-minute tour' },
-  sound: true,
-  options: { autoZoom: false }       // OneTake options for the page
-};
-`;
+const KIT = path.join(__dirname, '..', '..', 'templates', 'demo-kit');
 
-const TEMPLATE_TOUR = `// A OneTake tour: plain JavaScript run in the page with \`take\` ready.
-// Docs: https://github.com/TharinduWijayarathna/onetake/tree/main/docs
-take
-  .chapter('Welcome')
-  .caption('Welcome to My App', { duration: 2500 })
-  .wait(600)
-  .click('text=Get started')
-  .expect('text=Create your first project')
-  .zoom('form', 6)
-  .type('label=Project name', 'Apollo')
-  .click('role=button[name="Create"]')
-  .expect('text=Apollo')
-  .highlight('text=Apollo', { label: 'Your new project' })
-  .wait(1500)
-  .thumbnail();
-`;
-
+/** Scaffold a demo kit (onetake.config.js, tour.js, steps.js, record.sh) from templates/demo-kit. */
 function init(dir) {
   const target = path.resolve(dir || '.');
   fs.mkdirSync(target, { recursive: true });
-  const write = (name, body) => {
+  for (const name of fs.readdirSync(KIT)) {
+    if (name.startsWith('.')) continue;
     const f = path.join(target, name);
-    if (fs.existsSync(f)) { console.log('  · ' + name + ' exists, left as is'); return; }
-    fs.writeFileSync(f, body);
+    if (fs.existsSync(f)) { console.log('  · ' + name + ' exists, left as is'); continue; }
+    fs.copyFileSync(path.join(KIT, name), f);
+    if (name.endsWith('.sh')) fs.chmodSync(f, 0o755);
     console.log('  + ' + path.relative(process.cwd(), f));
-  };
-  write('onetake.config.js', TEMPLATE_CONFIG);
-  write('tour.js', TEMPLATE_TOUR);
+  }
   const gi = path.join(target, '.gitignore');
-  const ignore = ['videos/', 'recordings/', 'auth.json'];
+  const ignore = ['videos/', 'recordings/', 'auth.json', 'node_modules/'];
   const have = fs.existsSync(gi) ? fs.readFileSync(gi, 'utf8') : '';
   const missing = ignore.filter(l => !have.split(/\r?\n/).includes(l));
   if (missing.length) { fs.appendFileSync(gi, (have && !have.endsWith('\n') ? '\n' : '') + missing.join('\n') + '\n'); console.log('  + .gitignore: ' + missing.join(' ')); }
-  console.log('\nNext: edit the url in onetake.config.js, then\n  npx onetake check     # quick dry run\n  npx onetake record    # the video');
+  console.log('\nNext: set url in onetake.config.js and write tour.js, then\n  npx onetake check     # quick dry run\n  npx onetake record    # the video\n(or: bash record.sh, which signs in, checks and renders)');
 }
 
 function login(argv) {
@@ -108,12 +79,7 @@ function login(argv) {
   process.exit(r.status == null ? 1 : r.status);
 }
 
-async function launch(cfg) {
-  const { chromium } = loadPlaywright();
-  const opts = { headless: !cfg.headed };
-  if (process.env.CHROMIUM_PATH) opts.executablePath = process.env.CHROMIUM_PATH;
-  return chromium.launch(opts);
-}
+function launch(cfg) { return launchChromium(!cfg.headed); }
 
 function validate(cfg) {
   if (!cfg.url) fail('No page to open. Give --url, or set url in onetake.config.js (try: onetake init).');
@@ -202,6 +168,7 @@ function watchFiles(cfg, run) {
 
 async function main(argv) {
   if (argv[0] === 'login') return login(argv.slice(1));     // login has its own options (--check, --until, …)
+  if (argv[0] === 'setup') process.exit(installBrowser(argv.slice(1)));  // Chromium for this Playwright version
   if (argv[0] === 'mcp') return require('./mcp').serve();    // MCP server for AI agents, over stdio
   let parsed;
   try { parsed = parseArgs(argv); } catch (e) { fail(e.message); }

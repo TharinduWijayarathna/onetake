@@ -3,7 +3,7 @@
 ```bash
 git clone https://github.com/TharinduWijayarathna/onetake && cd onetake
 npm install
-npx playwright install chromium
+node bin/onetake.js setup
 npm test
 ```
 
@@ -32,8 +32,9 @@ assets/               logo, icon, social preview, brand guide
 
 ## The docs site
 
-`docs/*.md` (plus the README's introduction) are built into a single-page site by
-`scripts/build-site.js` (`npm run docs` → `site/index.html`). The `Docs site` workflow builds and
+`docs/*.md` (plus the README's introduction) are built into the site by `scripts/build-site.js`
+(`npm run docs` → `site/`): one folder per page (`site/mcp/index.html` is served as `/onetake/mcp/`),
+a `404.html`, plain-Markdown copies under `site/md/`, and `llms.txt` / `llms-full.txt` for agents. The `Docs site` workflow builds and
 publishes it to GitHub Pages on every push to `main` that touches the docs. To add a page, add the
 file to `docs/` and to `NAV` at the top of the script.
 

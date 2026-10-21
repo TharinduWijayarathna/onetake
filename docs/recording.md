@@ -1,10 +1,12 @@
 # Recording
 
 The recorder plays your tour in Chromium (through Playwright) and renders the video. You
-drive it with the `onetake` command (`node bin/onetake.js` in a clone of the repo).
+drive it with the `onetake` command: `npx onetake` after `npm install --save-dev github:TharinduWijayarathna/onetake`
+(or `node bin/onetake.js` in a clone of the repo).
 
 ```bash
-onetake init                    # onetake.config.js + tour.js
+onetake setup                   # install the Chromium build OneTake uses (once)
+onetake init                    # a demo kit: onetake.config.js, tour.js, steps.js, record.sh
 onetake check                   # dry run, fast, no video
 onetake record                  # the video
 onetake login --url http://localhost:3000/login --until /dashboard --out auth.json
@@ -169,8 +171,8 @@ One script can cross any number of page loads. See
 Everything is headless, so the recorder runs on any Linux box with Node:
 
 ```bash
-npx playwright install --with-deps chromium
-onetake record --frame --sound
+npx onetake setup --with-deps
+npx onetake record --frame --sound
 ```
 
 See [Recipes → Render in CI](recipes.md#render-the-video-in-ci).

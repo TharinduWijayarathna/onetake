@@ -16,7 +16,7 @@
 const fs = require('fs');
 const path = require('path');
 const { spawn } = require('child_process');
-const { loadPlaywright, readLibrary } = require('./util');
+const { launchChromium, readLibrary } = require('./util');
 const { resolveConfig } = require('./config');
 
 const ROOT = path.join(__dirname, '..', '..');
@@ -37,10 +37,7 @@ const state = { browser: null, context: null, page: null, cwd: null, lib: null }
 
 async function browser() {
   if (state.browser && state.browser.isConnected()) return state.browser;
-  const { chromium } = loadPlaywright();
-  const opts = { headless: true };
-  if (process.env.CHROMIUM_PATH) opts.executablePath = process.env.CHROMIUM_PATH;
-  state.browser = await chromium.launch(opts);
+  state.browser = await launchChromium(true);
   return state.browser;
 }
 

@@ -16,6 +16,7 @@ src/recorder/         the CLI, recorder, virtual clock and renderer (Node)
 dist/onetake.js       the built library (committed, so it works without a build step)
 types/                TypeScript types
 scripts/build.js      src/library/ → dist/onetake.js
+scripts/build-site.js docs/*.md → site/index.html (the GitHub Pages site)
 docs/                 documentation
 templates/demo-kit/   the starter kit for a project
 skills/               the Claude skill (with AGENTS.md, CLAUDE.md and llms.txt at the root)
@@ -28,6 +29,13 @@ assets/               logo, icon, social preview, brand guide
 - Edit `src/library/`, never `dist/` by hand, then `npm run build`. Commit the rebuilt `dist/` with your change.
 - Keep `types/`, `docs/`, `AGENTS.md`, `llms.txt` and `skills/` in step with the code.
 - Each fixture is a folder in `test/fixtures/` with an `index.html` (defining `window.__verify()`) and a `tour.js`.
+
+## The docs site
+
+`docs/*.md` (plus the README's introduction) are built into a single-page site by
+`scripts/build-site.js` (`npm run docs` → `site/index.html`). The `Docs site` workflow builds and
+publishes it to GitHub Pages on every push to `main` that touches the docs. To add a page, add the
+file to `docs/` and to `NAV` at the top of the script.
 
 ## Tests
 

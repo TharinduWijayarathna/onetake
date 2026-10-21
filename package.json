@@ -36,7 +36,8 @@
     "test:compat": "node scripts/build.js && node test/e2e/compat.js",
     "test:record": "node scripts/build.js && node test/e2e/record.js",
     "test:visual": "node scripts/build.js && node test/e2e/visual.js",
-    "test:all": "npm test && node test/e2e/compat.js && node test/e2e/record.js"
+    "test:all": "npm test && node test/e2e/compat.js && node test/e2e/record.js",
+    "docs": "node scripts/build-site.js"
   },
   "keywords": [
     "demo",
@@ -52,7 +53,7 @@
     "type": "git",
     "url": "git+https://github.com/TharinduWijayarathna/one-take.git"
   },
-  "homepage": "https://github.com/TharinduWijayarathna/one-take",
+  "homepage": "https://tharinduwijayarathna.github.io/one-take/",
   "bugs": {
     "url": "https://github.com/TharinduWijayarathna/one-take/issues"
   },

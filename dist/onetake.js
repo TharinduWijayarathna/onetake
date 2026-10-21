@@ -651,6 +651,10 @@
   OneTake.query = queryTarget;
   OneTake.findByText = function (text, root) { try { return textMatches(root || document, norm(text), 'exact')[0] || null; } catch (e) { return null; } };
   OneTake.findByLabel = function (text, root) { return labelMatches(root || document, norm(text))[0] || null; };
+  /** For tooling (the MCP page inspector): an element's ARIA role, visibility and a short description. */
+  OneTake.roleOf = roleOf;
+  OneTake.isVisible = isVisible;
+  OneTake.describe = describeEl;
 
   /* ---- src/library/20-cursor.js ---- */
   /* ==================================================================

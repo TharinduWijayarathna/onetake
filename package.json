@@ -1,6 +1,6 @@
 {
   "name": "onetake",
-  "version": "2.0.0",
+  "version": "1.0.0",
   "description": "Script product demo videos: a human-like cursor, real UI interactions, hand-drawn highlights and smooth camera zoom, rendered to 60 fps in one take.",
   "main": "dist/onetake.js",
   "browser": "dist/onetake.js",

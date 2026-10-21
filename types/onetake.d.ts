@@ -1,4 +1,4 @@
-// Type definitions for OneTake 2.x
+// Type definitions for OneTake 1.x
 // Project: https://github.com/TharinduWijayarathna/onetake
 // Docs: docs/api.md
 //

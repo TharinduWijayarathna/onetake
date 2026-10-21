@@ -10,7 +10,7 @@
  *
  * Page loads: when a step navigates, the new page gets the library again and the same
  * script runs again with `resumeFrom` set, so it carries on from the next step. Several
- * tour files still work the v1 way: each file continues on the page the previous one left.
+ * tour files run one after another: each file continues on the page the previous one left.
  */
 const fs = require('fs');
 const path = require('path');
@@ -237,7 +237,7 @@ async function runSession(page, cfg, driver, log = console.log) {
       const s = await driver.advance();
       if (s.nav || s.run !== runId) {
         await ready();
-        if (finished) break;                            // v1 style: the next file runs on the new page
+        if (finished) break;                            // several files: the next one runs on the new page
         // A step that already acted (clicked, typed) is not repeated; one cut short before acting is.
         const from = current ? current.index + (current.done || current.acted ? 1 : 0) : 0;
         log(`  ↻ page loaded, continuing from step ${from + 1}`);

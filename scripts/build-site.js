@@ -22,7 +22,7 @@ const fragment = process.argv.includes('--fragment');
 /* ---------- navigation ---------- */
 
 const NAV = [
-  ['Prologue', [['introduction', 'Introduction'], ['migrating-from-v1', 'Migrating from v1']]],
+  ['Prologue', [['introduction', 'Introduction']]],
   ['Getting started', [['getting-started', 'Installation & first video'], ['writing-tours', 'Writing tours']]],
   ['The basics', [['targets', 'Targets'], ['waiting-and-assertions', 'Waiting & assertions'], ['camera-and-highlights', 'Camera, highlights & captions']]],
   ['The recorder', [['recording', 'Recording'], ['output', 'Output']]],

@@ -87,7 +87,7 @@ Read it online at **[tharinduwijayarathna.github.io/onetake](https://tharinduwij
 | [Recipes](docs/recipes.md) | Dropdowns, date pickers, uploads, drag and drop, demo data, CI |
 | [AI agents](docs/ai-agents.md) | Let an agent make the video |
 | [Troubleshooting](docs/troubleshooting.md) | Every error message, and what to do |
-| [Migrating from v1](docs/migrating-from-v1.md) · [Architecture](docs/architecture.md) · [Contributing](docs/contributing.md) | |
+| [Architecture](docs/architecture.md) · [Contributing](docs/contributing.md) | |
 
 ## Three ways to run a tour
 

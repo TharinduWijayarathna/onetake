@@ -171,7 +171,7 @@ onetake record tour.js --url http://localhost:3000 --storage auth.json \
 `onetake.config.js` holds the same keys ([docs/recording.md](docs/recording.md)). The defaults
 are identical takes (`seed: 7`), frame-by-frame at 60 fps, 1920×1080 at scale 1, subtitles,
 chapters and a thumbnail. `--realtime` gives a fast live screencast. `--watch` re-runs on save.
-v1-style `--script a.js --script b.js` (one file per page) still works.
+Several tour files (`--script a.js --script b.js`) run one after another, each on the page the previous one left.
 
 ---
 

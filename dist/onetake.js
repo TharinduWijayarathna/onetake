@@ -1,5 +1,5 @@
 /*!
- * OneTake v2.0.0
+ * OneTake v1.0.0
  * Scripted, human-looking cursor, UI automation, highlights and camera zoom
  * for recording product demo videos in one take.
  * https://tharinduwijayarathna.github.io/onetake/
@@ -2507,7 +2507,7 @@
     });
   };
 
-  OneTake.version = '2.0.0';
+  OneTake.version = '1.0.0';
   return OneTake;
 });
 //# sourceURL=onetake.js

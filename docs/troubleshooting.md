@@ -110,8 +110,9 @@ detect a "slow network". Try `--realtime` to confirm, and tell us about it. Usua
 **`ffmpeg` not found.** `npm install` normally brings one (`ffmpeg-static`). Otherwise
 install it (`brew install ffmpeg`, `apt install ffmpeg`) or set `FFMPEG_PATH`.
 
-**Chromium won't start.** Run `npx playwright install chromium`. On Linux, add
-`--with-deps` to install the system libraries too. Or point `CHROMIUM_PATH` at a Chromium.
+**"Chromium for OneTake isn't installed yet" / Chromium won't start.** Run `npx onetake setup`.
+It installs the build that matches OneTake's Playwright version. On Linux, add `--with-deps` to
+install the system libraries too. Or point `CHROMIUM_PATH` at a Chromium.
 
 ## Live mode
 

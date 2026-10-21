@@ -16,13 +16,14 @@ recorder does the rest, including tours that cross page loads. Every take is ide
 
 ## 1. Get OneTake and the kit
 
-- Use an existing clone if there is one (look next to the project, e.g. `../onetake` or `../one-take`), or
-  `git clone https://github.com/TharinduWijayarathna/onetake.git`. Inside it, run
-  `npm install && npx playwright install chromium`.
-- The CLI is `node <onetake>/bin/onetake.js` (`onetake` below). `onetake help` lists every flag.
-- Copy `<onetake>/templates/demo-kit/` to `<project>-demo/`. For details beyond this skill,
-  read `<onetake>/AGENTS.md` and `<onetake>/docs/` (api.md, targets.md, recipes.md,
-  troubleshooting.md, mcp.md), or the docs site https://tharinduwijayarathna.github.io/onetake/.
+- No clone needed. Create the kit next to the project:
+  `npx -y github:TharinduWijayarathna/onetake init <project>-demo`, then in it
+  `npm install --save-dev github:TharinduWijayarathna/onetake && npx onetake setup`
+  (`record.sh` does this on its first run).
+- The CLI is `npx onetake` inside the kit (`onetake` below). `onetake help` lists every flag.
+- For details beyond this skill, read the docs site https://tharinduwijayarathna.github.io/onetake/,
+  or `node_modules/onetake/AGENTS.md` and `node_modules/onetake/docs/` (api.md, targets.md,
+  recipes.md, troubleshooting.md, mcp.md).
 
 ## 2. Pick the scenario from the project's own browser tests
 

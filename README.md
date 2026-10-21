@@ -64,9 +64,9 @@ npx onetake record --frame --intro "Northwind CRM|Adding a contact" --sound
 ## Get started
 
 ```bash
-npm install --save-dev github:TharinduWijayarathna/onetake
-npx playwright install chromium
-npx onetake init          # onetake.config.js + tour.js
+npm install --save-dev github:TharinduWijayarathna/onetake    # no clone needed
+npx onetake setup         # the Chromium build OneTake uses (once)
+npx onetake init          # a demo kit: onetake.config.js, tour.js, steps.js, record.sh
 npx onetake check         # try the tour
 npx onetake record        # → videos/demo.mp4
 ```
@@ -125,7 +125,7 @@ assets/               logo, icon, social preview, brand guide
 ## Development
 
 ```bash
-npm install && npx playwright install chromium
+npm install && npx onetake setup
 npm run build          # src/ → dist/onetake.js
 npm test               # build + unit tests
 npm run test:compat    # frameworks and widgets, trusted and synthetic input

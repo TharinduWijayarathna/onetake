@@ -225,8 +225,8 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with: { node-version: 22 }
-      - run: npm ci
-      - run: npx playwright install --with-deps chromium
+      - run: npm ci                          # with onetake in devDependencies
+      - run: npx onetake setup --with-deps
       - run: npm run dev & npx wait-on http://localhost:3000   # start your app
       - run: npx onetake check && npx onetake record --frame --sound
       - uses: actions/upload-artifact@v4

@@ -7,12 +7,15 @@
 
 ## Install
 
-In your project, or in a separate folder next to it:
+No clone needed. In your project, or in a separate folder next to it:
 
 ```bash
 npm install --save-dev github:TharinduWijayarathna/onetake
-npx playwright install chromium       # the browser the recorder drives
+npx onetake setup                     # the Chromium build the recorder drives (once)
 ```
+
+`onetake setup` installs the browser that matches OneTake's own Playwright version (a plain
+`npx playwright install` might fetch a different one). On Linux CI, use `npx onetake setup --with-deps`.
 
 `npm install` also fetches a bundled ffmpeg (`ffmpeg-static`). If that isn't available on
 your platform, install ffmpeg yourself (`brew install ffmpeg`, `apt install ffmpeg`) or point
@@ -26,8 +29,9 @@ your platform, install ffmpeg yourself (`brew install ffmpeg`, `apt install ffmp
 npx onetake init
 ```
 
-This creates `onetake.config.js`, a starter `tour.js`, and `.gitignore` lines for videos
-and saved logins. Open `onetake.config.js` and set `url` to the page your tour starts on:
+This creates a demo kit: `onetake.config.js`, a starter `tour.js`, `steps.js` for reusable
+steps, `record.sh` (sign in, check and render in one command), and `.gitignore` lines for
+videos and saved logins. Open `onetake.config.js` and set `url` to the page your tour starts on:
 
 ```js
 module.exports = {

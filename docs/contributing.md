@@ -3,7 +3,7 @@
 ```bash
 git clone https://github.com/TharinduWijayarathna/onetake && cd onetake
 npm install
-npx playwright install chromium
+node bin/onetake.js setup
 npm test
 ```
 

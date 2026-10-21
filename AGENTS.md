@@ -14,7 +14,8 @@ is in [`docs/`](docs/README.md).
 ## What you produce
 
 A **demo kit**: a folder that sits **next to** the target project, never inside its repo.
-Start it from `templates/demo-kit/`:
+Create it with `npx -y github:TharinduWijayarathna/onetake init <project>-demo` (no clone needed;
+`record.sh` installs OneTake into the kit on its first run), or copy `templates/demo-kit/`:
 
 ```
 <project>-demo/
@@ -164,7 +165,7 @@ Options: `speed`, `waitTimeout`, `typingDelay`, `typos`, `autoZoom`, `zoomScale`
 ## Recorder cheat sheet
 
 ```bash
-onetake init | check | record | login        # node <one-take>/bin/onetake.js … from a clone
+onetake setup | init | check | record | login | mcp   # in a kit: node_modules/.bin/onetake
 onetake record tour.js --url http://localhost:3000 --storage auth.json \
   --width 1440 --height 900 --scale 2 --now 2026-11-02T09:00 \
   --frame ocean --title "Acme" --intro "Acme|Managing clients" --outro "Try Acme|acme.example" \

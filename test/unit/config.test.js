@@ -61,3 +61,11 @@ test('switches never swallow the tour path; --frame <bg> keeps --title', () => {
   assert.deepEqual(a.flags.frame, { background: 'ocean', title: 'Acme' });
   assert.equal(parseArgs(['record', '--sound', 'false']).flags.sound, false);
 });
+
+test('onetake login takes its own options (--check, --until, --login)', () => {
+  const { spawnSync } = require('child_process');
+  const r = spawnSync(process.execPath, [path.join(__dirname, '..', '..', 'bin', 'onetake.js'),
+    'login', '--check', 'http://127.0.0.1:9/dashboard', '--login', '/login', '--out', path.join(os.tmpdir(), 'no-such-auth.json')], { encoding: 'utf8' });
+  assert.equal(r.status, 1);                                   // no saved session → "not signed in"
+  assert.doesNotMatch(r.stdout + r.stderr, /Unknown option/);
+});

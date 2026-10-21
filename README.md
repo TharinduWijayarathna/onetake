@@ -72,6 +72,8 @@ npx onetake record        # → videos/demo.mp4
 
 ## Documentation
 
+Read it online at **[tharinduwijayarathna.github.io/one-take](https://tharinduwijayarathna.github.io/one-take/)**, or right here:
+
 | | |
 |---|---|
 | [Getting started](docs/getting-started.md) | Install and make your first video |

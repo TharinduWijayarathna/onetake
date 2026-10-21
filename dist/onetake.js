@@ -2,7 +2,7 @@
  * OneTake v2.0.0
  * Scripted, human-looking cursor, UI automation, highlights and camera zoom
  * for recording product demo videos in one take.
- * https://github.com/TharinduWijayarathna/one-take
+ * https://tharinduwijayarathna.github.io/one-take/
  * MIT License. Built from src/library/ by scripts/build.js — edit the sources, not this file.
  */
 (function (global, factory) {

@@ -13,7 +13,7 @@ maps the pages, writes the tour, checks it, renders it, and looks at the result.
 | [`skills/onetake-demo-video/SKILL.md`](../skills/onetake-demo-video/SKILL.md) | A Claude skill with the same workflow, so Claude uses it whenever you ask for a demo video. |
 | [`llms.txt`](../llms.txt) | A map of the repo for tools that read `llms.txt`. |
 | [`templates/demo-kit/`](../templates/demo-kit/) | The kit the agent copies next to your project. |
-| `docs/` | The full reference, when it needs details. |
+| `docs/` | The full reference, when it needs details. Also online as [llms-full.txt](https://tharinduwijayarathna.github.io/onetake/llms-full.txt) and one Markdown file per page under `/md/`. |
 | [`onetake mcp`](mcp.md) | An MCP server: the agent inspects your pages, tests targets, checks and renders through tools. The best option for Claude Desktop and other apps without a terminal. |
 
 ## How to ask

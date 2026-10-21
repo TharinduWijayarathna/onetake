@@ -53,6 +53,27 @@ The server runs headless Chromium in the background and keeps one page open betw
 Most tools take `cwd`: the demo kit folder with `onetake.config.js` and `auth.json`. Clients
 start servers in different folders, so agents should always pass it.
 
+## Why it runs on your machine
+
+The server can't be hosted on the docs site, or anywhere else, and pointed at by URL:
+
+- GitHub Pages only serves static files, and an MCP server is a running program.
+- More importantly, the tools drive a real browser that has to reach *your* app, usually on
+  `localhost` and signed in with your `auth.json`. A server somewhere else can't see your
+  `localhost`, and shouldn't hold your session.
+
+So `onetake mcp` runs locally, started by your agent. What the site does host is the docs in
+forms agents read directly, with no server:
+
+| URL | |
+|---|---|
+| `https://tharinduwijayarathna.github.io/onetake/llms.txt` | The map of the docs, with a link to every page |
+| `https://tharinduwijayarathna.github.io/onetake/llms-full.txt` | Every page in one file |
+| `https://tharinduwijayarathna.github.io/onetake/md/<page>.md` | One page as Markdown, e.g. `md/mcp.md` |
+| `https://tharinduwijayarathna.github.io/onetake/<page>/` | The page itself, e.g. `mcp/`, `api/#options` |
+
+An agent that can fetch URLs can learn OneTake from these even before the server is installed.
+
 ## Tools
 
 | Tool | What it does |

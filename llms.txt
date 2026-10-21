@@ -12,6 +12,9 @@
 
 ## Docs
 
+Online: https://tharinduwijayarathna.github.io/onetake/ (llms-full.txt there has every page in one file).
+
+
 - [docs/getting-started.md](docs/getting-started.md): install, first video.
 - [docs/writing-tours.md](docs/writing-tours.md): how tours run, multi-page tours, storytelling, reusable steps (OneTake.define, includes).
 - [docs/targets.md](docs/targets.md): text=, text*=, label=, role=, CSS, `>>` chaining, nth=, shadow DOM, iframes, strict matching.

@@ -273,7 +273,7 @@ function build() {
     .replace(/width="64" height="64"/, 'width="28" height="28"').replace(/id="ot-g"/, 'id="ot-site-g"').replace(/url\(#ot-g\)/, 'url(#ot-site-g)');
 
   const body = `
-<div class="topbar">
+<div class="topbar"><div class="topbar-inner">
   <button class="menu" type="button" aria-label="Open the menu" aria-expanded="false" aria-controls="sidebar"><span></span><span></span><span></span></button>
   <a class="brand" href="#introduction">${icon}<span>One<b>Take</b></span></a>
   <span class="version">v${esc(pkg.version)}</span>
@@ -283,7 +283,7 @@ function build() {
     <a href="${REPO}" target="_blank" rel="noopener">GitHub</a>
     <button class="theme" type="button" aria-label="Switch between light and dark"><svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true"><path d="M10 3a7 7 0 1 0 7 7 5.5 5.5 0 0 1-7-7z" fill="currentColor"/></svg></button>
   </nav>
-</div>
+</div></div>
 <div class="layout">
   <aside class="sidebar" id="sidebar" aria-label="Documentation">${nav}</aside>
   <main class="content" id="content">${articles}</main>
@@ -366,9 +366,10 @@ a:hover { text-decoration: underline; text-underline-offset: 3px; }
 kbd { font: 500 11px/1 var(--font-mono); padding: 3px 6px; border: 1px solid var(--line-strong); border-bottom-width: 2px; border-radius: 5px; color: var(--muted); background: var(--surface); }
 
 /* top bar */
-.topbar { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20; height: var(--top); display: flex; align-items: center; gap: 16px;
-  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+.topbar { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20; height: var(--top);
   background: color-mix(in srgb, var(--surface) 88%, transparent); backdrop-filter: saturate(1.4) blur(10px); border-bottom: 1px solid var(--line); }
+.topbar-inner { max-width: 1440px; height: 100%; margin: 0 auto; display: flex; align-items: center; gap: 16px;
+  padding-left: max(24px, env(safe-area-inset-left, 0px)); padding-right: max(20px, env(safe-area-inset-right, 0px)); }
 .brand { display: flex; align-items: center; gap: 10px; color: var(--fg); font-weight: 800; font-size: 19px; letter-spacing: -.02em; }
 .brand:hover { text-decoration: none; }
 .brand b { color: var(--accent); font-weight: 800; }
@@ -388,6 +389,9 @@ kbd { font: 500 11px/1 var(--font-mono); padding: 3px 6px; border: 1px solid var
 .layout { display: grid; grid-template-columns: 270px minmax(0, 1fr) 230px; max-width: 1440px; margin: 0 auto; }
 .sidebar { position: sticky; top: calc(var(--top) + env(safe-area-inset-top, 0px)); align-self: start; height: calc(100vh - var(--top)); overflow-y: auto;
   padding: 28px 20px 40px max(24px, env(safe-area-inset-left, 0px)); border-right: 1px solid var(--line); }
+.sidebar, .onpage { scrollbar-width: thin; scrollbar-color: var(--line-strong) transparent; }
+.sidebar::-webkit-scrollbar, .onpage::-webkit-scrollbar { width: 6px; }
+.sidebar::-webkit-scrollbar-thumb, .onpage::-webkit-scrollbar-thumb { background: var(--line-strong); border-radius: 6px; }
 .nav-group + .nav-group { margin-top: 26px; }
 .nav-group h4 { margin: 0 0 8px; font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--fg); }
 .nav-group ul { list-style: none; margin: 0; padding: 0; border-left: 1px solid var(--line); }
@@ -478,6 +482,7 @@ kbd { font: 500 11px/1 var(--font-mono); padding: 3px 6px; border: 1px solid var
   .search-open span, .search-open kbd, .top-links a { display: none; }
   .search-open { width: auto; margin-left: auto; }
   .version { display: none; }
+  .topbar-inner { padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
   .content { padding: 28px max(16px, env(safe-area-inset-right, 0px)) 64px max(16px, env(safe-area-inset-left, 0px)); }
   .anchor { display: none; }
   .table table { min-width: 620px; }
